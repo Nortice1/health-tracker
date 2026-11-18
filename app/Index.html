@@ -1,0 +1,1465 @@
+<!DOCTYPE html>
+<html>
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg: #f4f5f7; --card: #ffffff; --ink: #111827; --muted: #6b7280; --line: #e5e7eb;
+  --accent: #059669; --accent-soft: #d1fae5; --warn: #d97706; --warn-soft: #fef3c7;
+  --bad: #dc2626; --over-soft: #fed7aa; --chip: #eef0f3; --shadow: 0 1px 3px rgba(0,0,0,.08); --on-accent: #ffffff;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0b0f14; --card: #151b23; --ink: #e5e7eb; --muted: #9ca3af; --line: #263040;
+    --accent: #34d399; --accent-soft: #064e3b; --warn: #fbbf24; --warn-soft: #3b2f0b;
+    --bad: #f87171; --over-soft: #4a2a10; --chip: #1f2833; --shadow: none; --on-accent: #052e22;
+  }
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; background: var(--bg); color: var(--ink); font-family: Inter, system-ui, sans-serif; }
+body { padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
+header { position: sticky; top: 0; z-index: 5; background: var(--bg); padding: 14px 16px 8px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+h1 { font-size: 22px; margin: 0; font-weight: 800; letter-spacing: -.02em; }
+.date-wrap { display: flex; align-items: center; gap: 6px; }
+.today-btn { border: 0; background: var(--warn-soft); color: var(--warn); font: inherit; font-size: 13px; font-weight: 700; border-radius: 10px; padding: 8px 10px; }
+input[type=date].past { border-color: var(--warn); color: var(--warn); }
+input[type=date] { font: inherit; font-size: 16px; padding: 6px 8px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); color: var(--ink); }
+main { padding: 0 16px; max-width: 640px; margin: 0 auto; }
+.view { display: none; } .view.on { display: block; }
+.chips { display: flex; gap: 8px; overflow-x: auto; padding: 4px 0 12px; }
+.chip { border: 0; background: var(--chip); color: var(--ink); padding: 9px 16px; border-radius: 999px; font: inherit; font-weight: 600; font-size: 14px; white-space: nowrap; }
+.chip.on { background: var(--ink); color: var(--bg); }
+.card { background: var(--card); border-radius: 16px; padding: 14px 16px; margin-bottom: 12px; box-shadow: var(--shadow); }
+.ex { display: flex; justify-content: space-between; gap: 10px; align-items: center; cursor: pointer; }
+.ex h3 { margin: 0 0 4px; font-size: 16px; }
+.small { font-size: 13px; color: var(--muted); }
+.target { font-size: 13px; font-weight: 600; color: var(--accent); margin-top: 4px; }
+.badge { min-width: 46px; text-align: center; padding: 6px 8px; border-radius: 10px; background: var(--chip); font-weight: 700; font-size: 13px; }
+.badge.done { background: var(--accent-soft); color: var(--accent); }
+.section-title { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 18px 0 8px; font-weight: 700; }
+nav { position: fixed; bottom: 0; left: 0; right: 0; display: flex; background: var(--card); border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom); z-index: 10; }
+nav button { flex: 1; border: 0; background: none; color: var(--muted); font: inherit; font-size: 12px; font-weight: 600; padding: 10px 0 12px; }
+nav button span { display: block; font-size: 22px; margin-bottom: 2px; }
+nav button.on { color: var(--accent); }
+/* logger sheet */
+#sheet { position: fixed; inset: 0; background: var(--bg); z-index: 20; overflow-y: auto; display: none; padding: 14px 16px calc(24px + env(safe-area-inset-bottom)); }
+#sheet.on { display: block; }
+.modal { position: fixed; inset: 0; background: var(--bg); z-index: 21; overflow-y: auto; display: none; padding: 14px 16px calc(24px + env(safe-area-inset-bottom)); }
+.modal.on { display: block; }
+.sheet-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.close { border: 0; background: var(--chip); color: var(--ink); width: 36px; height: 36px; border-radius: 50%; font-size: 18px; }
+.stepper { display: flex; align-items: center; justify-content: space-between; margin: 10px 0; }
+.stepper label { font-weight: 600; width: 80px; }
+.stepper .ctrl { display: flex; align-items: center; gap: 10px; }
+.stepper button { width: 54px; height: 54px; border-radius: 14px; border: 0; background: var(--chip); color: var(--ink); font-size: 26px; font-weight: 600; }
+.stepper .unit { display: block; border: 0; background: var(--accent-soft); color: var(--accent); font: inherit; font-size: 13px; font-weight: 700; border-radius: 8px; padding: 4px 10px; margin-top: 4px; }
+.stepper input { width: 92px; text-align: center; font: inherit; font-size: 28px; font-weight: 800; border: 0; background: transparent; color: var(--ink); }
+.rpe { display: flex; gap: 6px; flex-wrap: wrap; }
+.rpe .chip { padding: 9px 13px; }
+.notes { width: 100%; font: inherit; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--card); color: var(--ink); margin-top: 10px; }
+.save { width: 100%; border: 0; border-radius: 16px; background: var(--accent); color: var(--on-accent); font: inherit; font-size: 18px; font-weight: 800; padding: 16px; margin-top: 14px; }
+.save:disabled { opacity: .5; }
+.setrow { display: flex; justify-content: space-between; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--line); font-weight: 600; }
+.setrow:last-child { border-bottom: 0; }
+.pr { color: #b45309; background: #fef3c7; border-radius: 8px; padding: 2px 8px; font-size: 12px; font-weight: 800; }
+.del { border: 0; background: none; color: var(--bad); font: inherit; font-size: 14px; font-weight: 700; padding: 10px 12px; margin: -10px -12px -10px 0; }
+.timer { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.timer .time { font-size: 30px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.timer.go .time { color: var(--accent); }
+/* stats */
+.kpis { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.kpi { background: var(--card); border-radius: 14px; padding: 12px; box-shadow: var(--shadow); }
+.kpi .v { font-size: 22px; font-weight: 800; margin-top: 4px; }
+.kpi .t { font-size: 12px; color: var(--muted); }
+select { font: inherit; font-size: 15px; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); color: var(--ink); width: 100%; margin-bottom: 8px; }
+.mrow { display: grid; grid-template-columns: 96px 1fr 34px; align-items: center; gap: 8px; margin: 5px 0; font-size: 13px; }
+.bar { height: 12px; border-radius: 6px; background: var(--chip); overflow: hidden; }
+.bar i { display: block; height: 100%; border-radius: 6px; }
+.region { font-weight: 700; font-size: 13px; margin: 12px 0 2px; }
+.legend { display: flex; gap: 12px; font-size: 12px; color: var(--muted); margin-top: 8px; flex-wrap: wrap; }
+.legend b { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 4px; vertical-align: -1px; }
+.field { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.field:last-child { border-bottom: 0; }
+.field label { font-weight: 600; }
+.field input { width: 120px; text-align: right; font: inherit; font-size: 18px; font-weight: 700; border: 0; background: transparent; color: var(--ink); }
+#toast { position: fixed; left: 50%; bottom: calc(90px + env(safe-area-inset-bottom)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 12px 18px; border-radius: 14px; font-weight: 700; z-index: 30; display: none; max-width: 90%; text-align: center; }
+.loading { text-align: center; color: var(--muted); padding: 40px 0; }
+canvas { max-width: 100%; }
+/* coach */
+#v-coach { padding-bottom: 170px; }
+body.kb nav { display: none; }
+body.kb #c-bar { bottom: 0 !important; }
+.bubble { max-width: 86%; padding: 10px 14px; border-radius: 18px; margin: 8px 0; font-size: 15px; line-height: 1.45; word-wrap: break-word; }
+.bubble p { margin: 0 0 6px; } .bubble p:last-child { margin-bottom: 0; }
+.bubble ul { margin: 4px 0; padding-left: 20px; } .bubble li { margin: 2px 0; }
+.bubble.me { margin-left: auto; background: var(--accent); color: var(--on-accent); border-bottom-right-radius: 6px; }
+.bubble.bot { background: var(--card); box-shadow: var(--shadow); border-bottom-left-radius: 6px; }
+.acts { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); }
+.act { font-size: 14px; padding: 4px 0; font-weight: 600; }
+.act.bad { color: var(--warn); }
+.act-btns { display: flex; gap: 8px; margin-top: 8px; }
+.act-btns button { flex: 1; border: 0; border-radius: 12px; font: inherit; font-weight: 700; padding: 10px; }
+.act-ok { background: var(--accent); color: var(--on-accent); } .act-no { background: var(--chip); color: var(--ink); }
+.act-ok:disabled { opacity: .5; }
+.act-st { font-size: 13px; font-weight: 700; margin-top: 6px; color: var(--muted); }
+.act-st.ok { color: var(--accent); } .act-st.bad { color: var(--warn); }
+.meal { padding: 10px 0; border-bottom: 1px solid var(--line); display: flex; gap: 10px; align-items: flex-start; }
+.meal:last-of-type { border-bottom: 0; }
+.meal-food { font-weight: 700; margin: 2px 0; }
+.meal-macro { font-size: 13px; color: var(--muted); }
+.meal-tot { display: grid; grid-template-columns: 72px 1fr 116px; gap: 8px; align-items: center; font-size: 13px; font-weight: 600; margin: 6px 0; }
+.meal-tot span:last-child { text-align: right; }
+.add-meal { width: 100%; border: 0; border-radius: 12px; background: var(--accent-soft); color: var(--accent); font: inherit; font-weight: 700; padding: 11px; margin-top: 10px; }
+.bubble.err { background: var(--warn-soft); color: var(--ink); font-size: 13px; }
+.typing span { display: inline-block; width: 7px; height: 7px; margin: 0 2px; border-radius: 50%; background: var(--muted); animation: blink 1.2s infinite; }
+.typing span:nth-child(2) { animation-delay: .2s; } .typing span:nth-child(3) { animation-delay: .4s; }
+@keyframes blink { 0%, 80%, 100% { opacity: .25; } 40% { opacity: 1; } }
+#c-bar { position: fixed; left: 0; right: 0; bottom: 64px; z-index: 9; display: none; gap: 8px; align-items: flex-end; padding: 8px 12px; background: var(--bg); border-top: 1px solid var(--line); }
+body.coach #c-bar { display: flex; }
+#c-in { flex: 1; resize: none; font: inherit; font-size: 16px; padding: 10px 14px; border-radius: 20px; border: 1px solid var(--line); background: var(--card); color: var(--ink); max-height: 120px; overflow-y: hidden; }
+#c-photo { width: 44px; height: 44px; border-radius: 50%; border: 0; background: var(--chip); font-size: 20px; flex: none; }
+#c-pic { position: absolute; left: 12px; bottom: 100%; margin-bottom: 6px; background: var(--card); border-radius: 12px; padding: 4px; box-shadow: 0 2px 8px rgba(0,0,0,.2); }
+#c-pic img { display: block; height: 72px; border-radius: 9px; }
+#c-pic button { position: absolute; top: -8px; right: -8px; width: 24px; height: 24px; border-radius: 50%; border: 0; background: var(--ink); color: var(--bg); font-size: 12px; }
+#c-meal { width: 44px; height: 44px; border-radius: 50%; border: 0; background: var(--chip); font-size: 20px; flex: none; }
+#c-send { width: 44px; height: 44px; border-radius: 50%; border: 0; background: var(--accent); color: var(--on-accent); font-size: 18px; flex: none; }
+.focus-pill { display: flex; align-items: center; justify-content: space-between; gap: 8px; background: var(--accent-soft); color: var(--accent); border-radius: 12px; padding: 8px 12px; font-size: 13px; font-weight: 600; margin-bottom: 8px; }
+.focus-pill button { border: 0; background: none; color: inherit; font-size: 16px; }
+.ask { border: 0; background: var(--accent-soft); color: var(--accent); font: inherit; font-weight: 700; font-size: 13px; border-radius: 10px; padding: 8px 12px; margin-top: 10px; }
+.hero-title { margin-bottom: 6px; }
+.rings { display: flex; justify-content: space-around; }
+.ring { display: flex; flex-direction: column; align-items: center; }
+.bodymap { width: 100%; max-height: 330px; display: block; }
+.bodymap [data-m] { cursor: pointer; }
+.cal { width: 100%; display: block; }
+.plan { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; text-align: center; }
+.plan .hd { font-size: 11px; color: var(--muted); font-weight: 700; }
+.pc { border-radius: 10px; padding: 5px 0 4px; background: var(--chip); color: var(--muted); border: 2px solid transparent; min-width: 0; }
+.pc .d { font-size: 11px; } .pc .k { font-size: 12px; font-weight: 700; } .pc .s { font-size: 11px; height: 14px; line-height: 14px; }
+.pc.done { background: var(--k); color: #fff; }
+.pc.next { background: var(--card); color: var(--k); border-color: var(--k); }
+.pc.miss .k { text-decoration: line-through; } .pc.miss .s { color: var(--bad); }
+.pc.today { box-shadow: 0 0 0 2px var(--ink); }
+.pc.none { background: transparent; }
+.lifts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.lift { background: var(--card); border-radius: 14px; padding: 12px; box-shadow: var(--shadow); cursor: pointer; border: 2px solid transparent; min-width: 0; }
+.lift.on { border-color: var(--accent); }
+.lift-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lift-v { font-size: 22px; font-weight: 800; margin: 2px 0; }
+.spark { width: 100%; height: 28px; display: block; margin-top: 6px; }
+/* HIIT 4x4 timer */
+.hiit-run { border-radius: 20px; padding: 16px; text-align: center; color: #fff; background: var(--ph); }
+.hiit-run .ph { font-size: 22px; font-weight: 800; }
+.hiit-run .big { font-size: 84px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.hiit-btns { display: flex; gap: 8px; margin-top: 12px; }
+.hiit-btns button { flex: 1; border: 0; border-radius: 14px; font: inherit; font-size: 16px; font-weight: 700; padding: 14px 0; background: var(--chip); color: var(--ink); }
+
+</style>
+</head>
+<body>
+<header>
+  <h1 id="title">Train</h1>
+  <div class="date-wrap"><button class="today-btn" id="today-btn" style="display:none">Today</button><input type="date" id="date"></div>
+</header>
+
+<main>
+  <section class="view on" id="v-train">
+    <div class="chips" id="dayChips"></div>
+    <div id="exList"><div class="loading">Loading...</div></div>
+    <div class="section-title">Cardio</div>
+    <div class="card" id="cardioBox"><div class="small">Loading...</div></div>
+    <div class="section-title">Calories out</div>
+    <div class="card" id="kcalBox"><div class="small">Loading...</div></div>
+  </section>
+
+  <section class="view" id="v-stats">
+    <div id="stats"><div class="loading">Loading...</div></div>
+  </section>
+
+  <section class="view" id="v-body">
+    <div class="card">
+      <div class="field"><label>Weight (kg)</label><input id="b-w" type="number" inputmode="decimal" step="0.1" placeholder="–"></div>
+      <div class="field"><label>Body fat %</label><input id="b-bf" type="number" inputmode="decimal" step="0.1" placeholder="–"></div>
+      <div class="field"><label>Calories</label><input id="b-kcal" type="number" inputmode="numeric" placeholder="–"></div>
+      <div class="field"><label>Protein (g)</label><input id="b-protein" type="number" inputmode="numeric" placeholder="–"></div>
+      <div class="field"><label>Notes</label><input id="b-notes" type="text" placeholder="–" style="width:170px;font-size:16px;font-weight:500"></div>
+    </div>
+    <div class="small" id="b-info" style="margin:-4px 4px 4px"></div>
+    <button class="save" id="b-save">Save</button>
+    <div class="section-title">Meals</div>
+    <div class="card" id="b-meals"><div class="small">Loading...</div></div>
+    <div class="section-title">Body weight</div>
+    <div class="card"><canvas id="c-bodyform" height="200"></canvas></div>
+  </section>
+  <section class="view" id="v-coach">
+    <div class="card" id="c-setup" style="display:none">
+      <b>Connect the free AI coach</b>
+      <ol class="small" style="padding-left:18px;margin:8px 0">
+        <li>Open <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--accent)">aistudio.google.com/apikey</a> and sign in.</li>
+        <li>Tap <b>Create API key</b> and copy it.</li>
+        <li>Paste it here and save. It is stored privately in your script, not on this phone.</li>
+      </ol>
+      <input class="notes" id="c-key" placeholder="Paste Gemini API key" autocomplete="off" style="margin-top:0">
+      <button class="save" id="c-key-save" style="font-size:16px;padding:12px">Save key</button>
+    </div>
+    <div class="focus-pill" id="c-focus" style="display:none"><span>Talking about: <span id="c-focus-name"></span></span><button id="c-focus-x">✕</button></div>
+    <div style="text-align:right"><button class="del" id="c-clear" style="display:none;color:var(--muted)">Clear chat</button></div>
+    <div id="c-msgs"></div>
+    <div class="chips" id="c-sugg" style="flex-wrap:wrap"></div>
+  </section>
+</main>
+
+<div id="sheet">
+  <div class="sheet-top">
+    <div>
+      <div class="small" id="s-muscle"></div>
+      <h1 id="s-name" style="font-size:20px"></h1>
+    </div>
+    <button class="close" id="s-close">✕</button>
+  </div>
+  <div class="card">
+    <div class="small">Last session <span id="s-lastdate"></span></div>
+    <div style="font-weight:700;margin-top:2px" id="s-last"></div>
+    <div class="target" id="s-target"></div>
+    <div class="small" id="s-notes" style="margin-top:4px"></div>
+    <button class="ask" id="s-ask">💬 Ask coach about this</button>
+  </div>
+  <div class="card">
+    <div class="stepper" id="w-wrap">
+      <label><span id="w-label">Weight</span><button class="unit" id="s-unit" type="button">kg</button></label>
+      <div class="ctrl"><button data-d="-1" data-f="w">−</button><input id="s-w" type="number" inputmode="decimal" step="0.5"><button data-d="1" data-f="w">+</button></div>
+    </div>
+    <div class="small" id="w-kg" style="text-align:right;margin-top:-4px"></div>
+    <div class="stepper">
+      <label>Reps</label>
+      <div class="ctrl"><button data-d="-1" data-f="r">−</button><input id="s-r" type="number" inputmode="numeric"><button data-d="1" data-f="r">+</button></div>
+    </div>
+    <div class="small" style="margin:8px 0 6px">RPE (how hard, optional)</div>
+    <div class="rpe" id="s-rpe"></div>
+    <input class="notes" id="s-note" placeholder="Note (optional)">
+    <button class="save" id="s-save">Save set</button>
+  </div>
+  <div class="card timer" id="timer">
+    <div><div class="small">Rest timer</div><div class="time" id="t-time">0:00</div></div>
+    <div class="chips" style="padding:0" id="t-chips"></div>
+  </div>
+  <div class="section-title">Today</div>
+  <div class="card" id="s-today"><div class="small">No sets yet</div></div>
+</div>
+
+<div id="cform" class="modal">
+  <div class="sheet-top"><h1 style="font-size:20px">🏃 Log cardio</h1><button class="close" id="cf-close">✕</button></div>
+  <button class="add-meal" id="cf-import" style="margin:0 0 6px">📄 Import workout file (.tcx)</button>
+  <input type="file" id="cf-file" style="display:none">
+  <div class="small" id="cf-info" style="margin:0 2px 10px"></div>
+  <div class="card">
+    <div class="field"><label>Type</label><select id="cf-type" style="width:190px;margin:0;font-size:16px;font-weight:600"><option value="">Choose...</option><option>Treadmill run</option><option>Outdoor run</option><option>Incline walk</option><option>Walk</option><option>Bike</option><option>Elliptical</option><option>Rowing</option><option>Stair climber</option><option>HIIT</option><option>HIIT 4x4</option><option>Swim</option><option>Football</option><option>Badminton</option><option>Golf</option><option>Weight training</option><option value="other">Other...</option></select></div>
+    <div class="field" id="cf-other-row" style="display:none"><label>Other type</label><input id="cf-type-other" type="text" placeholder="e.g. Basketball" style="width:190px;font-size:16px;font-weight:600"></div>
+    <div class="field"><label>Minutes</label><input id="cf-min" type="number" inputmode="numeric" placeholder="–"></div>
+    <div class="field"><label>Distance (km)</label><input id="cf-km" type="number" inputmode="decimal" step="0.01" placeholder="–"></div>
+    <div class="field"><label>Avg HR</label><input id="cf-avg" type="number" inputmode="numeric" placeholder="–"></div>
+    <div class="field"><label>Max HR</label><input id="cf-max" type="number" inputmode="numeric" placeholder="–"></div>
+    <div class="field"><label>Calories</label><input id="cf-kcal" type="number" inputmode="numeric" placeholder="–"></div>
+    <div class="field"><label>Notes</label><input id="cf-note" type="text" placeholder="–" style="width:190px;font-size:16px;font-weight:500"></div>
+  </div>
+  <button class="save" id="cf-save">Save cardio</button>
+</div>
+
+<div id="hiit" class="modal">
+  <div class="sheet-top"><h1 style="font-size:20px">⏱ HIIT 4x4</h1><button class="close" id="h-close">✕</button></div>
+  <div id="h-body"></div>
+</div>
+
+<div id="toast"></div>
+
+<div id="c-bar"><div id="c-pic" style="display:none"><img id="c-pic-img" alt=""><button id="c-pic-x">✕</button></div><input type="file" id="c-file" accept="image/*" style="display:none"><button id="c-meal" title="Log a meal">🍽️</button><button id="c-photo" title="Send a photo">📷</button><textarea id="c-in" rows="1" placeholder="Ask your coach..."></textarea><button id="c-send">➤</button></div>
+
+<nav>
+  <button class="on" data-v="train"><span>🏋️</span>Train</button>
+  <button data-v="stats"><span>📊</span>Stats</button>
+  <button data-v="body"><span>⚖️</span>Body</button>
+  <button data-v="coach"><span>💬</span>Coach</button>
+</nav>
+
+<script>
+const api = (fn, ...args) => new Promise((ok, fail) =>
+  google.script.run.withSuccessHandler(ok).withFailureHandler(fail)[fn](...args));
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+
+const S = { date: '', train: null, stats: null, day: 'Push', cur: null, rpe: '', charts: {}, timer: null, rest: 90 };
+
+// The gym's machines are marked in lb; the sheet always stores kg (lb only changes what the logger shows and takes)
+const LB = 0.45359237;
+S.unit = store.get('unit') === 'lb' ? 'lb' : 'kg';
+const toLb = kg => Math.round(kg / LB * 2) / 2;
+const toKg = lb => Math.round(lb * LB * 10) / 10;
+const wShow = kg => S.unit === 'lb' && +kg > 0 ? toLb(+kg) : kg;
+// lb shown is rounded to 0.5, so an untouched prefill keeps its exact kg (60 kg stays 60, not 60.1)
+const kgOf = v => S.unit !== 'lb' ? v : S.wBase > 0 && toLb(S.wBase) === v ? S.wBase : toKg(v);
+const lbText = t => S.unit === 'lb' ? String(t).replace(/(\d+(?:\.\d+)?) kg/g, (m, n) => toLb(+n) + ' lb') : t;
+
+function localYmd(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+function toast(msg, ms) { const t = $('toast'); t.textContent = msg; t.style.display = 'block'; clearTimeout(t._h); t._h = setTimeout(() => (t.style.display = 'none'), ms || 2200); }
+function errText(e) { return e && e.message ? e.message : String(e); }
+function fail(e) { toast('⚠️ ' + errText(e), 4000); }
+// Replace a screen that failed to load with the error and a retry button
+function showLoadError(el, e, retry) {
+  el.innerHTML = '<div class="card small">⚠️ Could not load: ' + esc(errText(e)) + '<br><button class="ask retry">Try again</button></div>';
+  el.querySelector('.retry').onclick = retry;
+}
+
+function fmtSet(type, w, r) {
+  if (type === 'Weight') return w + '×' + r;
+  if (type === 'Bodyweight') return (w ? 'BW+' + w : 'BW') + '×' + r;
+  return (w ? '+' + w + 'kg ' : '') + r + ' reps';
+}
+function fmtDate(s) { if (!s) return ''; const d = new Date(s + 'T00:00:00'); return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }); }
+
+// ---------- navigation ----------
+document.querySelectorAll('nav button').forEach(b => b.onclick = () => show(b.dataset.v));
+function show(v) {
+  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.v === v));
+  document.querySelectorAll('.view').forEach(s => s.classList.toggle('on', s.id === 'v-' + v));
+  $('title').textContent = { train: 'Train', stats: 'Stats', body: 'Body', coach: 'Coach' }[v];
+  document.body.classList.toggle('coach', v === 'coach');
+  if (v === 'stats') loadStats();
+  if (v === 'body') loadBody();
+  window.scrollTo(0, 0);
+  if (v === 'coach') { placeCoachBar(); initCoach(); }
+}
+
+// ---------- train ----------
+const DAYS = ['Push', 'Pull', 'Legs', 'Other'];
+const WEEKDAY_GUESS = ['Push', 'Push', 'Pull', 'Legs', 'Push', 'Push', 'Pull']; // Sun..Sat
+
+function pickDefaultDay() {
+  const saved = store.get('day:' + S.date);
+  if (saved) return saved;
+  return WEEKDAY_GUESS[new Date(S.date + 'T00:00:00').getDay()];
+}
+
+function renderChips() {
+  $('dayChips').innerHTML = DAYS.map(d => '<button class="chip' + (d === S.day ? ' on' : '') + '" data-d="' + d + '">' + d + '</button>').join('');
+  $('dayChips').querySelectorAll('.chip').forEach(c => c.onclick = () => { S.day = c.dataset.d; store.set('day:' + S.date, S.day); renderChips(); renderExList(); });
+}
+
+async function loadTrain() {
+  const d = S.date;
+  $('exList').innerHTML = '<div class="loading">Loading...</div>';
+  try {
+    const t = await api('getTrain', d);
+    if (d !== S.date) return; // the date changed while loading; a newer load is on its way
+    S.train = t; S.lastRow = t.lastRow; renderExList();
+  } catch (e) { if (d === S.date) showLoadError($('exList'), e, loadTrain); }
+  loadCardio();
+}
+
+// ---------- cardio ----------
+async function loadCardio() {
+  const d = S.date;
+  try { const c = await api('getCardio', d); if (d === S.date) renderCardio(c); }
+  catch (e) { if (d === S.date) $('cardioBox').innerHTML = $('kcalBox').innerHTML = '<div class="small">⚠️ ' + esc(errText(e)) + '</div>'; }
+}
+// Whole-day calories burned, typed from Google Health (it does not share calories with Apple Health)
+function renderKcalOut(c) {
+  $('kcalBox').innerHTML = '<div class="field"><label>Calories burned</label><input id="ko-in" type="number" inputmode="numeric" placeholder="–" value="' + esc(c.kcalOut) + '"></div>' +
+    '<div class="small">Whole-day total from Google Health. Type it when the day is over (pick the date above).</div>' +
+    '<button class="add-meal" id="ko-save">🔥 Save calories out</button>';
+  $('ko-save').onclick = async () => {
+    const d = S.date, val = $('ko-in').value.trim(), btn = $('ko-save');
+    btn.disabled = true; btn.textContent = 'Saving...';
+    try { const nc = await api('saveKcalOut', d, val); if (d === S.date) renderCardio(nc); toast(val ? 'Calories out saved ✓' : 'Calories out cleared'); }
+    catch (e) { fail(e); btn.disabled = false; btn.textContent = '🔥 Save calories out'; }
+  };
+}
+function renderCardio(c) {
+  const pct = Math.min(100, c.weekMin / c.target * 100);
+  let h = '<div class="meal-tot"><span>This week</span><div class="bar"><i style="width:' + pct + '%;background:' + css('--accent') + '"></i></div>' +
+    '<span>' + c.weekMin + ' / ' + c.target + ' min</span></div>';
+  const row = (x, i, gym) => {
+    const f = [x.min + ' min'];
+    if (x.km !== '') f.push(x.km + ' km');
+    if (x.avg !== '') f.push('HR ' + x.avg + (x.max !== '' ? '/' + x.max : ''));
+    if (x.kcal !== '') f.push(x.kcal + ' kcal');
+    return '<div class="meal"><div style="flex:1;min-width:0"><div class="small">' + esc(x.start || '') + (x.start ? ' · ' : '') + esc(x.source) + '</div>' +
+      '<div class="meal-food">' + esc(x.type) + '</div><div class="meal-macro">' + f.join(' · ') + (x.notes ? ' · "' + esc(x.notes) + '"' : '') + '</div></div>' +
+      '<button class="del" data-cardio="' + (i + 1) + '"' + (gym ? ' data-gym="1"' : '') + '>🗑</button></div>';
+  };
+  c.sessions.forEach((x, i) => { h += row(x, i, false); });
+  if (!c.sessions.length) h += '<div class="small" style="margin-top:6px">No cardio on this day.</div>';
+  // Weight-training watch data: shown and stored apart, never in the cardio minutes above
+  if ((c.gym || []).length) h += '<div class="small" style="margin-top:12px;font-weight:700">🏋️ Gym session (not cardio)</div>' + c.gym.map((x, i) => row(x, i, true)).join('');
+  h += '<button class="add-meal" id="cardio-add">🏃 Log cardio</button><button class="add-meal" id="hiit-open">⏱ HIIT 4x4 timer</button>';
+  $('cardioBox').innerHTML = h;
+  renderKcalOut(c);
+  $('cardioBox').querySelectorAll('[data-cardio]').forEach(btn => btn.onclick = async () => {
+    if (btn.dataset.armed !== '1') { btn.dataset.armed = '1'; btn.textContent = 'Delete?'; setTimeout(() => { if (!btn.disabled) { btn.dataset.armed = ''; btn.textContent = '🗑'; } }, 3000); return; }
+    btn.disabled = true; btn.textContent = '...';
+    const d = S.date;
+    try { const nc = await api('deleteCardio', d, +btn.dataset.cardio, btn.dataset.gym === '1'); if (d === S.date) renderCardio(nc); toast(btn.dataset.gym === '1' ? 'Gym session deleted' : 'Cardio deleted'); }
+    catch (e) { fail(e); loadCardio(); }
+  });
+  $('cardio-add').onclick = openCardioForm;
+  $('hiit-open').onclick = openHiit;
+}
+// Empty cardio form (the HIIT timer fills it in after opening it)
+function openCardioForm() {
+  ['type', 'type-other', 'min', 'km', 'avg', 'max', 'kcal', 'note'].forEach(k => ($('cf-' + k).value = ''));
+  $('cf-other-row').style.display = 'none';
+  S.tcx = null; S.hiitNote = null; $('cf-info').textContent = '';
+  $('cform').classList.add('on');
+}
+
+// Heart-rate zones for imported workouts, Fitbit style (heart rate reserve).
+// Change AGE / REST_HR if they are off: max HR = 220 - AGE.
+const AGE = 30, REST_HR = 60; // EXAMPLES: replace both with your own values before using HR zones.
+const TCX_SPORT = { Running: 'Outdoor run', Biking: 'Bike' };
+
+/** Summary of a Google Health / Fitbit .tcx export. GPS is ignored and never leaves the phone. */
+function parseTcx(text) {
+  if (!/<TrainingCenterDatabase/.test(text)) throw new Error('Not a .tcx workout file');
+  const first = (re, s) => { const m = re.exec(s); return m ? m[1] : ''; };
+  const startIso = first(/<Lap StartTime="([^"]+)"/, text) || first(/<Id>([^<]+)<\/Id>/, text);
+  if (!startIso) throw new Error('No start time in the file');
+  const sum = re => { let t = 0, m; while ((m = re.exec(text))) t += +m[1]; return t; };
+  // Lap totals are the device's own numbers; summing GPS points drifts while standing still
+  const sec = sum(/<TotalTimeSeconds>([\d.]+)<\/TotalTimeSeconds>/g);
+  const laps = (text.match(/<Lap /g) || []).length;
+  const lapKm = sum(/<\/TotalTimeSeconds>\s*<DistanceMeters>([\d.]+)<\/DistanceMeters>/g) / 1000; // the lap's own distance sits right after its time
+  const kcal = sum(/<Calories>(\d+)<\/Calories>/g);
+  const pts = [...text.matchAll(/<Time>([^<]+)<\/Time>[\s\S]*?<HeartRateBpm>\s*<Value>(\d+)<\/Value>/g)]
+    .map(m => [Date.parse(m[1]), +m[2]]).filter(p => p[0] && p[1] > 30);
+  const max = 220 - AGE, hrr = max - REST_HR, zone = { fat: 0, cardio: 0, peak: 0 };
+  let hrSum = 0, hrMax = 0;
+  pts.forEach((p, i) => {
+    hrSum += p[1]; hrMax = Math.max(hrMax, p[1]);
+    const dt = i + 1 < pts.length ? Math.min((pts[i + 1][0] - p[0]) / 1000, 10) : 1; // gaps over 10 s are not counted
+    const pct = (p[1] - REST_HR) / hrr;
+    if (pct >= 0.85) zone.peak += dt; else if (pct >= 0.6) zone.cardio += dt; else if (pct >= 0.4) zone.fat += dt;
+  });
+  const m = k => Math.round(zone[k] / 60);
+  const fmt = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Bangkok', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+  const part = t => fmt.formatToParts(new Date(startIso)).find(x => x.type === t).value;
+  return {
+    date: part('year') + '-' + part('month') + '-' + part('day'), start: part('hour') + ':' + part('minute'),
+    type: TCX_SPORT[first(/<Activity Sport="([^"]+)"/, text)] || '',
+    minutes: Math.round(sec / 60), km: lapKm > 0 ? Math.round(lapKm * 100) / 100 : '', kcal: kcal || '',
+    avg: pts.length ? Math.round(hrSum / pts.length) : '', max: hrMax || '',
+    zones: pts.length ? { fat: m('fat'), cardio: m('cardio'), peak: m('peak'), azm: m('fat') + 2 * (m('cardio') + m('peak')) } : null,
+    laps: laps,
+  };
+}
+
+$('cf-import').onclick = () => $('cf-file').click();
+$('cf-file').onchange = async () => {
+  const f = $('cf-file').files[0];
+  $('cf-file').value = '';
+  if (!f) return;
+  try {
+    const w = parseTcx(await f.text());
+    S.tcx = w;
+    // Opened from the HIIT timer: keep its type and interval note, add the zones after it
+    const type = S.hiitNote ? 'HIIT 4x4' : w.type;
+    const zones = w.zones ? 'Zones: fat burn ' + w.zones.fat + ', cardio ' + w.zones.cardio + ', peak ' + w.zones.peak + ' min (AZM ' + w.zones.azm + ')' : '';
+    $('cf-type').value = type; $('cf-other-row').style.display = 'none'; $('cf-min').value = w.minutes; $('cf-km').value = w.km;
+    $('cf-avg').value = w.avg; $('cf-max').value = w.max; $('cf-kcal').value = w.kcal;
+    $('cf-note').value = S.hiitNote ? S.hiitNote + (zones ? ' · ' + zones : '') : zones;
+    $('cf-info').textContent = '📄 ' + fmtDate(w.date) + ' ' + w.start + ' · saves to that day' + (type ? '' : ' · pick the type below');
+    if (!type) $('cf-type').focus();
+  } catch (e) { S.tcx = null; $('cf-info').textContent = ''; toast('⚠️ ' + e.message, 4000); }
+};
+
+$('cf-type').onchange = () => {
+  const other = $('cf-type').value === 'other';
+  $('cf-other-row').style.display = other ? '' : 'none';
+  if (other) $('cf-type-other').focus();
+};
+$('cf-close').onclick = () => $('cform').classList.remove('on');
+$('cf-save').onclick = async () => {
+  const t = S.tcx;
+  const type = $('cf-type').value === 'other' ? $('cf-type-other').value.trim() : $('cf-type').value;
+  const p = { date: t ? t.date : S.date, type: type, minutes: $('cf-min').value, distance_km: $('cf-km').value,
+    avg_hr: $('cf-avg').value, max_hr: $('cf-max').value, kcal: $('cf-kcal').value, note: $('cf-note').value };
+  if (t) { p.start = t.start; p.source = 'Fitbit file'; }
+  if (!p.type) { toast('Enter the type'); return; }
+  if (!(+p.minutes > 0)) { toast('Enter the minutes'); return; }
+  const btn = $('cf-save'); btn.disabled = true; btn.textContent = 'Saving...';
+  try {
+    const c = await api('saveCardio', p);
+    if (p.date === S.date) renderCardio(c); else loadCardio(); // imported session from another day: the box shows the open day
+    $('cform').classList.remove('on'); S.tcx = S.hiitNote = null;
+    const what = /^(weight training|gym|strength training|lifting)$/i.test(p.type) ? 'Gym session' : 'Cardio';
+    toast(p.date === S.date ? what + ' saved ✓' : what + ' saved to ' + fmtDate(p.date) + ' ✓'); S.stats = null;
+  }
+  catch (e) { fail(e); }
+  btn.disabled = false; btn.textContent = 'Save cardio';
+};
+
+// Re-read today's sets for the open exercise (after a failed save or undo, to show what really is in the sheet)
+async function refreshCurrent() {
+  if (!S.cur) return;
+  try {
+    const t = await api('getTrain', S.date);
+    const fresh = t.exercises.find(x => x.name === S.cur.name);
+    S.train = t; S.lastRow = t.lastRow;
+    if (fresh) { S.cur.today = fresh.today; }
+    renderToday(); renderExList();
+  } catch (e) { /* keep what is on screen */ }
+}
+
+function renderExList() {
+  if (!S.train) return;
+  const list = S.train.exercises.map((e, i) => Object.assign({ i: i }, e))
+    .filter(e => S.day === 'Other' ? DAYS.indexOf(e.day) < 0 || e.day === 'Other' : e.day === S.day)
+    .filter(e => !/^retired/i.test(e.notes) || e.today.length); // retired by the coach: kept in the sheet for its history
+  const done = S.train.exercises.filter(e => e.today.length);
+  let html = '';
+  if (!list.length) html = '<div class="card small">No exercises for this day. Add them in the Exercises tab of the sheet.</div>';
+  list.forEach(e => {
+    const n = e.today.length, doneCls = n >= e.sets ? ' done' : '';
+    html += '<div class="card ex" data-i="' + e.i + '"><div style="min-width:0">' +
+      '<h3>' + esc(e.name) + '</h3>' +
+      '<div class="small">' + (e.lastSets.length ? 'Last: ' + e.lastSets.map(s => fmtSet(e.type, wShow(s[0]), s[1])).join(', ') : 'No history yet') + '</div>' +
+      '<div class="target">🎯 ' + esc(lbText(e.target)) + '</div></div>' +
+      '<div class="badge' + doneCls + '">' + n + '/' + e.sets + '</div></div>';
+  });
+  const others = done.filter(e => list.indexOf(list.find(x => x.name === e.name)) < 0);
+  if (others.length) html += '<div class="section-title">Also done today</div>' + others.map(e => '<div class="card small">' + esc(e.name) + ': ' + e.today.map(s => fmtSet(e.type, wShow(s.w), s.r)).join(', ') + '</div>').join('');
+  $('exList').innerHTML = html;
+  $('exList').querySelectorAll('.ex').forEach(c => c.onclick = () => openLogger(+c.dataset.i));
+}
+
+function openLogger(i) {
+  const e = S.cur = S.train.exercises[i];
+  $('s-name').textContent = e.name;
+  $('s-muscle').textContent = [e.muscle].concat(e.sec).join(' · ') + ' · ' + e.repMin + '-' + e.repMax + ' reps';
+  $('s-lastdate').textContent = e.lastDate ? '(' + fmtDate(e.lastDate) + ')' : '';
+  $('s-notes').textContent = e.notes || '';
+  $('w-label').textContent = e.type === 'Weight' ? 'Weight' : 'Added';
+  const last = e.today[e.today.length - 1];
+  S.wBase = +(last ? last.w : e.sugW);
+  $('s-w').value = wShow(S.wBase);
+  $('s-r').value = last ? last.r : e.sugR;
+  $('s-note').value = '';
+  S.rpe = '';
+  renderRpe();
+  renderUnit();
+  $('sheet').classList.add('on');
+  $('sheet').scrollTop = 0;
+}
+
+// Everything in the logger that shows a weight, in the chosen unit
+function renderUnit() {
+  const e = S.cur;
+  $('s-unit').textContent = S.unit + ' ⇄';
+  $('s-last').textContent = e.lastSets.length ? e.lastSets.map(s => fmtSet(e.type, wShow(s[0]), s[1])).join('  ·  ') : 'No history yet';
+  $('s-target').textContent = lbText('🎯 ' + e.target + (e.best ? '   ·   best ' + (e.type === 'Reps only' ? e.best + ' reps' : 'e1RM ' + e.best + ' kg') : ''));
+  renderToday();
+  wHint();
+}
+function wHint() { $('w-kg').textContent = S.unit === 'lb' && +$('s-w').value > 0 ? 'saves as ' + kgOf(+$('s-w').value) + ' kg' : ''; }
+
+$('s-unit').onclick = ev => {
+  ev.preventDefault();
+  const v = +$('s-w').value;
+  if (v > 0) S.wBase = kgOf(v);
+  S.unit = S.unit === 'lb' ? 'kg' : 'lb';
+  store.set('unit', S.unit);
+  if (v > 0) $('s-w').value = wShow(S.wBase);
+  renderUnit();
+};
+$('s-w').addEventListener('input', wHint);
+
+function renderRpe() {
+  $('s-rpe').innerHTML = [6, 7, 8, 9, 10].map(v => '<button class="chip' + (String(v) === String(S.rpe) ? ' on' : '') + '" data-v="' + v + '">' + v + '</button>').join('');
+  $('s-rpe').querySelectorAll('.chip').forEach(c => c.onclick = () => { S.rpe = S.rpe === c.dataset.v ? '' : c.dataset.v; renderRpe(); });
+}
+
+function renderToday() {
+  const e = S.cur;
+  if (!e.today.length) { $('s-today').innerHTML = '<div class="small">No sets yet</div>'; return; }
+  $('s-today').innerHTML = e.today.map((s, k) =>
+    '<div class="setrow"><span>Set ' + (k + 1) + ' · ' + fmtSet(e.type, wShow(s.w), s.r) + (s.rpe ? ' <span class="small">@' + s.rpe + '</span>' : '') +
+    (s.pr ? ' <span class="pr">PR</span>' : '') + '</span>' +
+    '<button class="del" data-row="' + s.row + '">🗑</button></div>').join('');
+  // Any set can be deleted; two taps, so a stray tap never removes one
+  $('s-today').querySelectorAll('.del').forEach(del => del.onclick = async () => {
+    if (del.dataset.armed !== '1') {
+      del.dataset.armed = '1'; del.textContent = 'Delete?';
+      setTimeout(() => { if (!del.disabled) { del.dataset.armed = ''; del.textContent = '🗑'; } }, 3000);
+      return;
+    }
+    del.disabled = true; del.textContent = '...';
+    try {
+      const newLast = await api('deleteSet', +del.dataset.row, S.date, e.name);
+      e.today = e.today.filter(s => s.row !== +del.dataset.row);
+      S.lastRow = typeof newLast === 'number' ? newLast : -1;
+      renderToday(); renderExList(); toast('Set deleted');
+      refreshCurrent(); // set numbers and PR flags are recounted by the sheet
+    } catch (err) { fail(err); refreshCurrent(); }
+  });
+}
+
+['s-w', 's-r'].forEach(id => $(id).addEventListener('focus', ev => ev.target.select()));
+document.querySelectorAll('.stepper .ctrl button').forEach(b => b.onclick = () => {
+  const e = S.cur, f = b.dataset.f, d = +b.dataset.d;
+  const inp = $(f === 'w' ? 's-w' : 's-r');
+  const step = f === 'w' ? (S.unit === 'lb' ? 5 : e.step > 0 ? e.step : 2.5) : 1;
+  const v = Math.max(0, Math.round(((+inp.value || 0) + d * step) * 100) / 100);
+  inp.value = v;
+  wHint();
+});
+
+$('s-close').onclick = () => { $('sheet').classList.remove('on'); renderExList(); };
+
+$('s-save').onclick = async () => {
+  const e = S.cur, btn = $('s-save');
+  const r = +$('s-r').value;
+  if (!(r > 0)) { toast('Enter reps'); return; }
+  if (e.type === 'Weight' && !(+$('s-w').value > 0)) { toast('Enter the weight'); return; }
+  if (btn.disabled) return;
+  btn.disabled = true; btn.textContent = 'Saving...';
+  unlockAudio();
+  try {
+    const w = S.unit === 'lb' && +$('s-w').value > 0 ? kgOf(+$('s-w').value) : $('s-w').value;
+    const res = await api('saveSet', { date: S.date, ex: e.name, w: w, r: r, rpe: S.rpe, notes: $('s-note').value });
+    S.lastRow = res.row;
+    S.wBase = +res.w;
+    e.today.push({ row: res.row, set: res.set, w: res.w, r: res.r, rpe: res.rpe, pr: res.pr });
+    renderToday();
+    $('s-note').value = '';
+    if (res.pr) toast('🏆 New PR!' + (res.e1rm ? '  e1RM ' + res.e1rm + ' kg' : ''), 3500);
+    else toast('Set ' + e.today.length + ' saved ✓');
+    startTimer(S.rest);
+  } catch (err) {
+    // The save may still have reached the sheet (weak signal): show what is really there before he taps again
+    toast('⚠️ ' + errText(err) + '. Check the Today list before saving again.', 5000);
+    refreshCurrent();
+  }
+  btn.disabled = false; btn.textContent = 'Save set';
+};
+
+// ---------- rest timer ----------
+let audioCtx = null;
+function unlockAudio() {
+  try {
+    // 'playback' lets the beep play even with the iPhone silent switch on (newer Safari only)
+    if (navigator.audioSession) navigator.audioSession.type = 'playback';
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    audioCtx.resume();
+  } catch (e) {}
+}
+function beep() {
+  if (!audioCtx) return;
+  if (audioCtx.state !== 'running') audioCtx.resume();
+  [0, 0.25, 0.5].forEach(t => {
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.frequency.value = 880; o.connect(g); g.connect(audioCtx.destination);
+    g.gain.setValueAtTime(0.25, audioCtx.currentTime + t); g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + t + 0.18);
+    o.start(audioCtx.currentTime + t); o.stop(audioCtx.currentTime + t + 0.2);
+  });
+  if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+}
+function renderTimerChips() {
+  $('t-chips').innerHTML = [60, 90, 120, 180].map(s => '<button class="chip' + (s === S.rest ? ' on' : '') + '" data-s="' + s + '">' + (s < 120 ? s + 's' : s / 60 + 'm') + '</button>').join('');
+  $('t-chips').querySelectorAll('.chip').forEach(c => c.onclick = () => { unlockAudio(); S.rest = +c.dataset.s; store.set('rest', S.rest); renderTimerChips(); startTimer(S.rest); });
+}
+function startTimer(sec) {
+  clearInterval(S.timer);
+  const end = Date.now() + sec * 1000;
+  $('timer').classList.remove('go');
+  const tick = () => {
+    const left = Math.max(0, Math.round((end - Date.now()) / 1000));
+    $('t-time').textContent = Math.floor(left / 60) + ':' + String(left % 60).padStart(2, '0');
+    if (left === 0) {
+      clearInterval(S.timer); $('timer').classList.add('go'); $('t-time').textContent = 'Go!';
+      if (Date.now() < end + 3000) beep(); // no late beep after the phone was locked
+    }
+  };
+  tick(); S.timer = setInterval(tick, 500);
+}
+
+// ---------- HIIT 4x4 timer ----------
+// 10 min warm-up, 4 x (4 min hard + 3 min easy); the easy part after the 4th hard is a 5 min cool-down
+const HIIT_PHASES = [
+  { name: 'Warm-up', sec: 600 },
+  { name: 'Hard 1 of 4', sec: 240, hard: 1 }, { name: 'Easy', sec: 180 },
+  { name: 'Hard 2 of 4', sec: 240, hard: 2 }, { name: 'Easy', sec: 180 },
+  { name: 'Hard 3 of 4', sec: 240, hard: 3 }, { name: 'Easy', sec: 180 },
+  { name: 'Hard 4 of 4', sec: 240, hard: 4 }, { name: 'Cool-down', sec: 300 },
+];
+const HIIT_MACHINES = { Bike: ['level', 1], Treadmill: ['km/h', 0.5], Other: ['level', 1] }; // what he sets, and the +/- step
+const mmss = s => Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+
+// Targets from his measured max HR (saved on the server), else 220 - AGE like the .tcx zones
+function hiitMax() { return +S.hiitData.maxHr || 220 - AGE; }
+function hiitZone(hard) { const m = hiitMax(); return hard ? Math.round(m * 0.85) + '–' + Math.round(m * 0.95) : Math.round(m * 0.6) + '–' + Math.round(m * 0.7); }
+
+// Next start setting, like the lift double progression: all 4 hard parts done and no peak HR over 95% = one step up
+function hiitNext(last, step) {
+  const top = last.levels[last.levels.length - 1];
+  const tooHigh = last.peaks.some(p => p > hiitMax() * 0.95);
+  const when = 'Last time (' + fmtDate(last.date) + ') ';
+  if (last.done === 4 && !tooHigh) return { v: Math.round((top + step) * 100) / 100, why: when + '4/4 done at ' + top + ': one step up' };
+  return { v: top, why: when + last.done + '/4 done' + (tooHigh ? ', peak HR over 95%' : '') + ': stay at ' + top };
+}
+
+// − / + buttons around an input in the same .ctrl
+function hiitStepper(id, step, onSet) {
+  const inp = $(id);
+  inp.parentNode.querySelectorAll('button').forEach(b => b.onclick = () => {
+    inp.value = Math.max(0, Math.round(((+inp.value || 0) + b.dataset.d * step) * 100) / 100);
+    if (onSet) onSet(+inp.value);
+  });
+  if (onSet) inp.oninput = () => onSet(+inp.value);
+}
+
+// Screen wake lock while the timer runs; some phones block it inside the Apps Script frame
+async function keepAwake(on) {
+  try {
+    if (!on) { if (S.wake) S.wake.release(); S.wake = null; return; }
+    if (navigator.wakeLock) S.wake = await navigator.wakeLock.request('screen');
+  } catch (e) { S.wake = null; }
+}
+document.addEventListener('visibilitychange', () => { if (S.hiit && document.visibilityState === 'visible') keepAwake(true); });
+
+async function openHiit() {
+  $('hiit').classList.add('on');
+  if (S.hiit) return; // still running: back to the timer
+  $('h-body').innerHTML = '<div class="loading">Loading...</div>';
+  try { S.hiitData = await api('getHiit'); renderHiitStart(); }
+  catch (e) { showLoadError($('h-body'), e, openHiit); }
+}
+$('h-close').onclick = () => {
+  $('hiit').classList.remove('on');
+  if (S.hiit) toast('The timer keeps running. Tap ⏱ HIIT 4x4 timer to go back.', 3500);
+};
+
+function renderHiitStart() {
+  const machine = HIIT_MACHINES[store.get('hiit-machine')] ? store.get('hiit-machine') : 'Bike';
+  const unit = HIIT_MACHINES[machine][0], step = HIIT_MACHINES[machine][1];
+  const last = S.hiitData.last[machine], next = last && hiitNext(last, step);
+  $('h-body').innerHTML = '<div class="chips" id="h-mach">' + Object.keys(HIIT_MACHINES).map(m => '<button class="chip' + (m === machine ? ' on' : '') + '" data-m="' + m + '">' + m + '</button>').join('') + '</div>' +
+    '<div class="card"><div class="stepper"><label>Start ' + unit + '</label><div class="ctrl"><button data-d="-1">−</button><input id="h-lv" type="number" inputmode="decimal" placeholder="–" value="' + (next ? next.v : '') + '"><button data-d="1">+</button></div></div>' +
+    '<div class="target">🎯 ' + esc(next ? next.why : 'First time: pick a ' + unit + ' you can just hold for 4 minutes') + '</div></div>' +
+    '<div class="card"><div class="field"><label>Max HR</label><input id="h-max" type="number" inputmode="numeric" placeholder="' + (220 - AGE) + '" value="' + esc(S.hiitData.maxHr) + '"></div>' +
+    '<div class="small">Hard ' + hiitZone(true) + ' bpm (85–95%) · easy ' + hiitZone(false) + ' bpm (60–70%). Blank = 220 − age; type your measured max.</div></div>' +
+    '<div class="small" style="margin:0 4px">10 min warm-up · 4 × (4 min hard + 3 min easy) · 5 min cool-down = 40 min. Silent switch off for the beeps.</div>' +
+    '<button class="save" id="h-start">▶ Start</button>';
+  $('h-mach').querySelectorAll('.chip').forEach(c => c.onclick = () => { store.set('hiit-machine', c.dataset.m); renderHiitStart(); });
+  hiitStepper('h-lv', step);
+  $('h-max').onchange = async () => {
+    try { S.hiitData = await api('saveHiitMaxHr', $('h-max').value.trim()); if (!S.hiit) renderHiitStart(); toast('Max HR saved ✓'); }
+    catch (e) { fail(e); }
+  };
+  $('h-start').onclick = () => {
+    const level = +$('h-lv').value;
+    if (!(level > 0)) { toast('Enter the start ' + unit); return; }
+    unlockAudio();
+    S.hiit = { machine: machine, unit: unit, step: step, level: level, levels: [], peaks: [], done: 0, phase: 0, skipped: false,
+      startedAt: Date.now(), paused: 0, pauseStart: null, skip: 0, inPhase: 0 };
+    keepAwake(true);
+    renderHiitRun(); hiitTick();
+    S.hiit.timer = setInterval(hiitTick, 250);
+  };
+}
+
+// Drawn once per part; hiitTick only updates the clock, so typing in the inputs is never interrupted
+function renderHiitRun() {
+  const H = S.hiit, ph = HIIT_PHASES[H.phase], next = HIIT_PHASES[H.phase + 1];
+  const after = !ph.hard && H.phase > 0 ? HIIT_PHASES[H.phase - 1].hard : 0; // the hard part that just ended
+  $('h-body').innerHTML =
+    '<div class="hiit-run" style="--ph:' + (ph.hard ? '#e11d48' : ph.name === 'Easy' ? '#059669' : '#3b82f6') + '">' +
+    '<div class="ph">' + ph.name + '</div><div class="big" id="h-time"></div><div>HR ' + hiitZone(ph.hard) + ' bpm</div></div>' +
+    '<div class="card" style="margin-top:12px"><div class="stepper"><label>' + (ph.hard ? 'Now' : 'Hard') + ' ' + H.unit + '</label><div class="ctrl"><button data-d="-1">−</button><input id="h-lv" type="number" inputmode="decimal" value="' + H.level + '"><button data-d="1">+</button></div></div>' +
+    (after ? '<div class="field"><label>Peak HR, hard ' + after + '</label><input id="h-peak" type="number" inputmode="numeric" placeholder="from watch" value="' + esc(H.peaks[after - 1] || '') + '"></div>' : '') +
+    '<div class="small" style="margin-top:6px">' + (next ? 'Next: ' + next.name + ', ' + next.sec / 60 + ' min' : 'Last part') + '</div></div>' +
+    '<div class="hiit-btns"><button id="h-pause">' + (H.pauseStart ? '▶ Resume' : '⏸ Pause') + '</button><button id="h-skip">⏭ Skip</button><button id="h-end">⏹ End</button></div>' +
+    '<div class="small" id="h-awake" style="margin-top:10px">Keep the screen on (Settings › Display & Brightness › Auto-Lock › Never): the beeps stop while the phone is locked.</div>';
+  hiitStepper('h-lv', H.step, v => { H.level = v; });
+  if (after) $('h-peak').oninput = e => { H.peaks[after - 1] = e.target.value; };
+  $('h-pause').onclick = () => {
+    if (H.pauseStart) { H.paused += Date.now() - H.pauseStart; H.pauseStart = null; } else H.pauseStart = Date.now();
+    $('h-pause').textContent = H.pauseStart ? '▶ Resume' : '⏸ Pause';
+  };
+  $('h-skip').onclick = () => { if (ph.hard) H.skipped = true; H.skip += ph.sec * 1000 - H.inPhase; hiitTick(); };
+  $('h-end').onclick = () => {
+    const b = $('h-end');
+    if (b.dataset.armed !== '1') { b.dataset.armed = '1'; b.textContent = 'End?'; setTimeout(() => { b.dataset.armed = ''; b.textContent = '⏹ End'; }, 3000); return; }
+    finishHiit();
+  };
+}
+
+// Clock time, not counted ticks: the timer stays right after a pause in JavaScript (phone locked, app in the background)
+function hiitTick() {
+  const H = S.hiit;
+  if (!H) return;
+  let t = (H.pauseStart || Date.now()) - H.startedAt - H.paused + H.skip, i = 0;
+  while (i < HIIT_PHASES.length && t >= HIIT_PHASES[i].sec * 1000) t -= HIIT_PHASES[i++].sec * 1000;
+  if (i !== H.phase) {
+    // After the phone was locked it can pass more than one part at once
+    for (; H.phase < i; H.phase++) {
+      const hard = HIIT_PHASES[H.phase].hard;
+      if (hard) { H.levels[hard - 1] = H.level; if (!H.skipped) H.done++; }
+      H.skipped = false;
+    }
+    if (i >= HIIT_PHASES.length) { finishHiit(); return; }
+    renderHiitRun();
+    if (t < 3000) beep(); // only right at the switch, no late beep
+  }
+  H.inPhase = t;
+  $('h-time').textContent = mmss(Math.ceil((HIIT_PHASES[i].sec * 1000 - t) / 1000));
+  $('h-awake').style.display = S.wake && !S.wake.released ? 'none' : '';
+}
+
+// Stop, then open the cardio form filled in: type HIIT 4x4, real minutes, the interval note getHiit reads back
+function finishHiit() {
+  const H = S.hiit;
+  clearInterval(H.timer); S.hiit = null; keepAwake(false);
+  $('hiit').classList.remove('on');
+  const ph = HIIT_PHASES[H.phase];
+  if (ph && ph.hard) H.levels[ph.hard - 1] = H.level; // ended inside a hard part: logged, not counted as done
+  const levels = H.levels.filter(v => v != null);
+  if (!levels.length) { toast('Stopped before the first hard part, nothing to log'); return; }
+  const peaks = levels.map((v, k) => (+H.peaks[k] > 0 ? Math.round(+H.peaks[k]) : '–'));
+  const note = '4x4 ' + H.machine + ' · ' + H.unit + ' ' + levels.join('/') + ' · ' + H.done + '/4 done' +
+    (peaks.some(p => p !== '–') ? ' · peak HR ' + peaks.join('/') : '');
+  openCardioForm();
+  $('cf-type').value = 'HIIT 4x4';
+  $('cf-note').value = S.hiitNote = note;
+  $('cf-min').value = Math.max(1, Math.round(((H.pauseStart || Date.now()) - H.startedAt - H.paused) / 60000));
+  $('cf-info').textContent = '⏱ From the timer. Import the Fitbit .tcx here to add HR and calories (it keeps this note), or just save.';
+}
+
+// ---------- stats ----------
+function lineChart(id, labels, sets, opts) {
+  if (typeof Chart === 'undefined' || !$(id)) return; // chart library blocked or canvas not on screen
+  opts = opts || {};
+  if (S.charts[id]) S.charts[id].destroy();
+  const ink = css('--muted'), line = css('--line');
+  const axisTitle = t => (t ? { display: true, text: t, color: ink, font: { family: 'Inter', size: 11 } } : undefined);
+  S.charts[id] = new Chart($(id), {
+    type: opts.type || 'line',
+    data: { labels: labels, datasets: sets },
+    options: {
+      responsive: true, animation: false, maintainAspectRatio: true, spanGaps: true,
+      plugins: { legend: { display: sets.length > 1, labels: { color: ink, boxWidth: 10, font: { family: 'Inter' } } } },
+      scales: {
+        x: { stacked: opts.stacked, ticks: { color: ink, maxTicksLimit: 6, font: { family: 'Inter', size: 11 } }, grid: { display: false } },
+        y: { stacked: opts.stacked, title: axisTitle(opts.yTitle), ticks: { color: ink, font: { family: 'Inter', size: 11 } }, grid: { color: line } },
+        y1: { display: !!opts.dual, position: 'right', title: axisTitle(opts.y1Title), ticks: { color: ink, font: { family: 'Inter', size: 11 } }, grid: { display: false } },
+      },
+      elements: { point: { radius: 2 }, line: { tension: .3, borderWidth: 2 } },
+    },
+  });
+}
+
+// Colour for "hard sets per muscle part this week": amber = low, green = good range, orange = a lot
+function heat(v) {
+  if (!v) return { c: css('--line'), o: 1 };
+  if (v < 6) return { c: '#f59e0b', o: 0.35 + (v / 6) * 0.6 };
+  if (v <= 12) return { c: '#10b981', o: 0.6 + ((v - 6) / 6) * 0.4 };
+  return { c: '#f97316', o: 1 };
+}
+const KIND_COLOR = { Push: '#3b82f6', Pull: '#10b981', Legs: '#f59e0b', Other: '#8b5cf6' };
+const HIIT_COLOR = '#ec4899'; // plan card only, not a Log day type
+
+function addDays(ymd, n) { const d = new Date(ymd + 'T00:00:00'); d.setDate(d.getDate() + n); return localYmd(d); }
+function mondayOf(ymd) { const d = new Date(ymd + 'T00:00:00'); return addDays(ymd, -((d.getDay() + 6) % 7)); }
+
+function ring(value, max, color, big, small) {
+  const r = 26, c = 2 * Math.PI * r, pct = Math.max(0, Math.min(1, max ? value / max : 0));
+  return '<div class="ring"><svg viewBox="0 0 64 64" width="72" height="72">' +
+    '<circle cx="32" cy="32" r="' + r + '" fill="none" stroke="' + css('--chip') + '" stroke-width="7"/>' +
+    (pct > 0 ? '<circle cx="32" cy="32" r="' + r + '" fill="none" stroke="' + color + '" stroke-width="7" stroke-linecap="round" ' +
+      'stroke-dasharray="' + (pct * c) + ' ' + c + '" transform="rotate(-90 32 32)"/>' : '') +
+    '<text x="32" y="37" text-anchor="middle" font-size="15" font-weight="800" fill="' + css('--ink') + '">' + esc(big) + '</text></svg>' +
+    '<div class="small" style="text-align:center">' + esc(small) + '</div></div>';
+}
+
+function spark(points, color) {
+  if (points.length < 2) return '';
+  const vs = points.map(p => p[1]), lo = Math.min.apply(null, vs), hi = Math.max.apply(null, vs), span = hi - lo || 1;
+  const pts = vs.map((v, i) => (i / (vs.length - 1) * 100).toFixed(1) + ',' + (26 - (v - lo) / span * 22).toFixed(1)).join(' ');
+  return '<svg viewBox="0 0 100 28" preserveAspectRatio="none" class="spark"><polyline points="' + pts + '" fill="none" stroke="' + color +
+    '" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/></svg>';
+}
+
+// Stylised front/back body; each muscle part coloured by this week's sets
+const BODY_FRONT = [
+  ['Front delts', 'e', 31, 38, 7, 6], ['Front delts', 'e', 69, 38, 7, 6],
+  ['Side delts', 'e', 22, 42, 4, 7], ['Side delts', 'e', 78, 42, 4, 7],
+  ['Upper chest', 'r', 35, 35, 14, 8], ['Upper chest', 'r', 51, 35, 14, 8],
+  ['Mid chest', 'r', 35, 44, 14, 7], ['Mid chest', 'r', 51, 44, 14, 7],
+  ['Lower chest', 'r', 35, 52, 14, 6], ['Lower chest', 'r', 51, 52, 14, 6],
+  ['Biceps', 'e', 24, 58, 5, 11], ['Biceps', 'e', 76, 58, 5, 11],
+  ['Forearms', 'e', 21.5, 86, 4.5, 12], ['Forearms', 'e', 78.5, 86, 4.5, 12],
+  ['Abs', 'r', 41, 61, 18, 32],
+  ['Quads', 'e', 41, 128, 7, 20], ['Quads', 'e', 59, 128, 7, 20],
+];
+const BODY_BACK = [
+  ['Rear delts', 'e', 31, 38, 7, 6], ['Rear delts', 'e', 69, 38, 7, 6],
+  ['Side delts', 'e', 22, 42, 4, 7], ['Side delts', 'e', 78, 42, 4, 7],
+  ['Upper back', 'p', 'M38 32 L62 32 L60 55 L50 60 L40 55 Z'],
+  ['Lats', 'p', 'M32 46 L40 56 L46 80 L35 74 Z'], ['Lats', 'p', 'M68 46 L60 56 L54 80 L65 74 Z'],
+  ['Lower back', 'r', 43, 78, 14, 14],
+  ['Triceps', 'e', 24, 58, 5, 11], ['Triceps', 'e', 76, 58, 5, 11],
+  ['Forearms', 'e', 21.5, 86, 4.5, 12], ['Forearms', 'e', 78.5, 86, 4.5, 12],
+  ['Glutes', 'e', 42, 103, 8, 8], ['Glutes', 'e', 58, 103, 8, 8],
+  ['Hamstrings', 'e', 42, 132, 7, 18], ['Hamstrings', 'e', 58, 132, 7, 18],
+  ['Calves', 'e', 42, 168, 6, 13], ['Calves', 'e', 58, 168, 6, 13],
+];
+
+function bodyMap(muscles, sets) {
+  const val = {};
+  muscles.forEach((m, i) => { val[m] = sets[i] || 0; });
+  const sil = css('--chip'), stroke = css('--card');
+  const base = '<circle cx="50" cy="14" r="10" fill="' + sil + '"/><rect x="45" y="22" width="10" height="9" fill="' + sil + '"/>' +
+    '<rect x="29" y="30" width="42" height="66" rx="11" fill="' + sil + '"/><rect x="33" y="90" width="34" height="18" rx="7" fill="' + sil + '"/>' +
+    '<rect x="18" y="33" width="12" height="42" rx="6" fill="' + sil + '"/><rect x="70" y="33" width="12" height="42" rx="6" fill="' + sil + '"/>' +
+    '<rect x="16" y="72" width="11" height="34" rx="5" fill="' + sil + '"/><rect x="73" y="72" width="11" height="34" rx="5" fill="' + sil + '"/>' +
+    '<rect x="33" y="104" width="16" height="88" rx="7" fill="' + sil + '"/><rect x="51" y="104" width="16" height="88" rx="7" fill="' + sil + '"/>';
+  const shape = s => {
+    const h = heat(val[s[0]]);
+    const a = ' fill="' + h.c + '" fill-opacity="' + h.o + '" stroke="' + stroke + '" stroke-width="1" data-m="' + esc(s[0]) + '"';
+    if (s[1] === 'e') return '<ellipse cx="' + s[2] + '" cy="' + s[3] + '" rx="' + s[4] + '" ry="' + s[5] + '"' + a + '/>';
+    if (s[1] === 'r') return '<rect x="' + s[2] + '" y="' + s[3] + '" width="' + s[4] + '" height="' + s[5] + '" rx="3"' + a + '/>';
+    return '<path d="' + s[2] + '"' + a + '/>';
+  };
+  const label = (x, t) => '<text x="' + x + '" y="207" text-anchor="middle" font-size="9" font-weight="700" letter-spacing="1" fill="' + css('--muted') + '">' + t + '</text>';
+  return '<svg viewBox="0 0 210 212" class="bodymap">' +
+    '<g>' + base + BODY_FRONT.map(shape).join('') + '</g>' +
+    '<g transform="translate(110,0)">' + base + BODY_BACK.map(shape).join('') + '</g>' +
+    label(50, 'FRONT') + label(160, 'BACK') + '</svg>';
+}
+
+function calendar(days, today) {
+  const start = addDays(mondayOf(today), -11 * 7), cell = 15, gap = 4;
+  let svg = '', workouts28 = 0;
+  for (let w = 0; w < 12; w++) {
+    for (let d = 0; d < 7; d++) {
+      const dt = addDays(start, w * 7 + d);
+      if (dt > today) continue;
+      const v = days[dt];
+      if (v && dt > addDays(today, -28)) workouts28++;
+      const fill = v ? KIND_COLOR[v[1]] || KIND_COLOR.Other : css('--chip');
+      const op = v ? 0.45 + Math.min(v[0], 25) / 25 * 0.55 : 1;
+      svg += '<rect x="' + (w * (cell + gap)) + '" y="' + (d * (cell + gap)) + '" width="' + cell + '" height="' + cell + '" rx="4" fill="' + fill +
+        '" fill-opacity="' + op + '"' + (dt === today ? ' stroke="' + css('--ink') + '" stroke-width="1.5"' : '') +
+        ' data-d="' + dt + '"><title>' + dt + (v ? ': ' + v[1] + ', ' + v[0] + ' sets' : '') + '</title></rect>';
+    }
+  }
+  const W = 12 * (cell + gap) - gap, H = 7 * (cell + gap) - gap;
+  return { svg: '<svg viewBox="0 0 ' + W + ' ' + H + '" class="cal">' + svg + '</svg>', workouts28: workouts28 };
+}
+
+// Rolling split plan from the server (splitPlan_ in webapp.gs, same plan the coach sees).
+// hiit = slot-7 dates (a Rest that shows his HIIT 4x4), hiitDone = dates with a "HIIT 4x4" Cardio row
+function planCard(days, today, plan, hiit, hiitDone) {
+  const mon = mondayOf(today);
+  let cells = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'].map(d => '<div class="hd">' + d + '</div>').join('');
+  for (let i = 0; i < 14; i++) {
+    const dt = addDays(mon, i), p = plan[dt], v = dt <= today ? days[dt] : null;
+    let cls = 'pc', k = p || '', s = '', col = '';
+    if (v) { cls += ' done'; k = v[1]; s = '✓'; col = KIND_COLOR[v[1]] || KIND_COLOR.Other; }
+    else if (!p) cls += ' none';
+    else if (hiit[dt] && hiitDone[dt]) { cls += ' done'; k = 'HIIT'; s = '✓'; col = HIIT_COLOR; }
+    else if (hiit[dt]) { k = 'HIIT'; s = dt < today ? '' : '·'; } // skipped HIIT is fine, never a miss
+    else if (p === 'Rest') s = dt < today ? '' : '·';
+    else if (dt < today) { cls += ' miss'; s = '✗'; }
+    else { cls += ' next'; col = KIND_COLOR[p]; }
+    if (dt === today) cls += ' today';
+    cells += '<div class="' + cls + '"' + (col ? ' style="--k:' + col + '"' : '') + '><div class="d">' + Number(dt.slice(8)) + '</div><div class="k">' + k + '</div><div class="s">' + s + '</div></div>';
+  }
+  const doneToday = days[today], upcoming = Object.keys(plan).filter(d => d > today && plan[d] !== 'Rest').sort()[0];
+  const head = doneToday ? 'Today: <b>' + doneToday[1] + ' ✓ done</b>' : 'Today: <b>' + (hiit[today] ? 'Rest + HIIT' : (plan[today] || 'Push')) + '</b>';
+  return '<div class="card"><div style="font-size:18px;margin-bottom:2px">' + head + '</div>' +
+    '<div class="small" style="margin-bottom:10px">Next workout: ' + (upcoming ? plan[upcoming] + ' · ' + fmtDate(upcoming) : '–') + '</div>' +
+    '<div class="plan">' + cells + '</div>' +
+    '<div class="small" style="margin-top:8px">Miss a workout and it waits for you. Train on a rest day and the plan moves on.</div></div>';
+}
+
+function liftCards(st) {
+  const names = Object.keys(st.strength).filter(n => st.strength[n].length);
+  names.sort((a, b) => {
+    const la = st.strength[a][st.strength[a].length - 1][0], lb = st.strength[b][st.strength[b].length - 1][0];
+    return la < lb ? 1 : la > lb ? -1 : a.localeCompare(b);
+  });
+  return names.slice(0, S.allLifts ? names.length : 8).map(n => {
+    const s = st.strength[n], last = s[s.length - 1], reps = st.types[n] === 'Reps only';
+    const cutoff = addDays(last[0], -28);
+    const before = s.filter(p => p[0] <= cutoff);
+    const base = before.length ? before[before.length - 1] : (s.length > 1 ? s[0] : null);
+    const ch = base && base[1] ? (last[1] - base[1]) / base[1] * 100 : null;
+    const chTxt = ch == null ? 'new' : (ch >= 0 ? '▲ ' : '▼ ') + Math.abs(ch).toFixed(1) + '%';
+    const chCol = ch == null ? css('--muted') : ch >= 0 ? css('--accent') : css('--bad');
+    return '<div class="lift" data-n="' + esc(n) + '"><div class="small lift-name">' + esc(n) + '</div>' +
+      '<div class="lift-v">' + last[1] + '<span class="small"> ' + (reps ? 'reps' : 'kg') + '</span></div>' +
+      '<div class="small" style="color:' + chCol + ';font-weight:700">' + chTxt + ' <span style="color:' + css('--muted') + ';font-weight:500">4 wk</span></div>' +
+      spark(s.slice(-12), chCol) + '</div>';
+  }).join('');
+}
+
+async function loadStats() {
+  try {
+    S.stats = await api('getStats');
+    const y = window.scrollY; // keep his place if he was already scrolling the older numbers
+    renderStats();
+    if ($('v-stats').classList.contains('on')) window.scrollTo(0, y);
+  } catch (e) {
+    if (S.stats) fail(e); // keep showing the last numbers
+    else showLoadError($('stats'), e, loadStats);
+  }
+}
+
+function renderStats() {
+  const st = S.stats;
+  const cur = st.weeks[st.weeks.length - 1] || { sets: [], total: 0, prs: 0, tonnage: 0, week: mondayOf(st.today) };
+  const prev = st.weeks[st.weeks.length - 2];
+  const mon = mondayOf(st.today);
+  let trainedThisWeek = 0;
+  for (let d = 0; d < 7; d++) if (st.days[addDays(mon, d)]) trainedThisWeek++;
+  const kpi = {};
+  st.kpis.forEach(k => { kpi[k.label] = k; });
+  const wKpi = st.kpis[0] || {}, wChg = st.kpis[1] || {};
+
+  // 1. Week at a glance: rings
+  let h = '<div class="card hero"><div class="small hero-title">This week · from ' + fmtDate(mon) + '</div><div class="rings">' +
+    ring(trainedThisWeek, 5, KIND_COLOR.Push, trainedThisWeek + '/5', 'workouts') +
+    ring(cur.total, prev && prev.total ? prev.total : 60, '#10b981', String(cur.total), 'sets' + (prev ? ' (last ' + prev.total + ')' : '')) +
+    ring(cur.prs, Math.max(cur.prs, 3), '#f59e0b', String(cur.prs), 'PRs') +
+    '</div></div>';
+
+  // 1b. Rolling split plan, re-planned from the log every day
+  h += '<div class="section-title">Training plan · this week and next</div>' + planCard(st.days, st.today, st.plan || {}, st.hiit || {}, st.hiitDone || {});
+
+  // 2. KPI tiles. Carbs, fat, fiber, veg+fruit, sodium: average of the meals of the last 7 full days, same layout as Calories / Protein
+  const fd = st.food || { avg: {}, today: {}, target: {} };
+  const rnd = (k, v) => (k === 'veg' ? Math.round(v * 10) / 10 : Math.round(v));
+  const foodTile = (label, k) => [label, fd.avg[k] === '' || fd.avg[k] == null ? '–' : String(rnd(k, fd.avg[k])),
+    'avg/day · today ' + rnd(k, +fd.today[k] || 0) + (fd.target[k] ? ' / ' + fd.target[k] : '')];
+  const tiles = [
+    ['Weight', wKpi.value, (wChg.value && wChg.value !== '–' ? wChg.value + ' kg / 4 wk' : '7-day avg')],
+    ['Body fat', st.kpis[2] && st.kpis[2].value, 'latest'],
+    // Big number = average of full days; today (still going) shown under it, never mixed in
+    ['Calories', st.kpis[5] && st.kpis[5].value, 'avg/day · today ' + (st.todayFood ? st.todayFood.kcal : 0) + (st.kpis[5] && st.kpis[5].target ? ' / ' + st.kpis[5].target : '')],
+    ['Protein g', st.kpis[6] && st.kpis[6].value, 'avg/day · today ' + (st.todayFood ? st.todayFood.protein : 0) + (st.kpis[6] && st.kpis[6].target ? ' / ' + st.kpis[6].target : '')],
+    foodTile('Carbs g', 'carbs'), foodTile('Fat g', 'fat'), foodTile('Fiber g', 'fiber'), foodTile('Veg+fruit', 'veg'), foodTile('Sodium mg', 'sodium'),
+    ['Sleep', st.kpis[7] && st.kpis[7].value, 'h, 7-day avg'],
+    ['Resting HR', st.kpis[8] && st.kpis[8].value, 'bpm, 7-day avg'],
+    ['Cardio', st.cardio ? st.cardio.weekMin + ' min' : '–', st.cardio ? 'this week, target ' + st.cardio.target : ''],
+  ];
+  h += '<div class="kpis">' + tiles.map(t => '<div class="kpi"><div class="t">' + t[0] + '</div><div class="v">' + esc(t[1] || '–') + '</div><div class="t">' + esc(t[2]) + '</div></div>').join('') + '</div>';
+
+  // 3. Body map
+  h += '<div class="section-title">Muscles worked · this week</div><div class="card">' + bodyMap(st.muscles, cur.sets) +
+    '<div class="small" id="bm-info" style="text-align:center;min-height:18px;margin-top:4px">Tap a muscle</div>' +
+    '<div class="legend" style="justify-content:center"><span><b style="background:' + css('--line') + '"></b>0</span><span><b style="background:#f59e0b"></b>1-5</span><span><b style="background:#10b981"></b>6-12</span><span><b style="background:#f97316"></b>12+</span><span>sets</span></div></div>';
+
+  // 4. Lift progress
+  const lifts = liftCards(st);
+  const nLifts = Object.keys(st.strength).filter(n => st.strength[n].length).length;
+  h += '<div class="section-title">Lift progress</div>' + (lifts ? '<div class="lifts">' + lifts + '</div>' : '<div class="card small">Log some sets to see your lifts here.</div>');
+  if (nLifts > 8) h += '<button class="ask" id="allLifts">' + (S.allLifts ? 'Show fewer' : 'Show all ' + nLifts + ' lifts') + '</button>';
+  h += '<div class="card" id="strCard" style="margin-top:12px;display:none"><div style="font-weight:700;margin-bottom:6px" id="strName"></div><canvas id="c-str" height="190"></canvas></div>';
+
+  // 5. Consistency calendar
+  const cal = calendar(st.days, st.today);
+  h += '<div class="section-title">Consistency · last 12 weeks</div><div class="card"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">' +
+    '<b style="font-size:20px">' + cal.workouts28 + '<span class="small" style="font-weight:500"> workouts in 28 days</span></b></div>' + cal.svg +
+    '<div class="legend">' + Object.keys(KIND_COLOR).map(k => '<span><b style="background:' + KIND_COLOR[k] + '"></b>' + k + '</span>').join('') + '<span>darker = more sets</span></div></div>';
+
+  // 6. Weekly sets by region
+  const anySets = st.weeks.some(w => w.total > 0);
+  h += '<div class="section-title">Weekly sets by region</div><div class="card">' +
+    (anySets ? '<canvas id="c-weeks" height="220"></canvas>' : '<div class="small">Your weekly sets will show here once you log a workout.</div>') + '</div>';
+
+  // 7. Body weight, sleep, PRs
+  h += '<div class="section-title">Body weight</div><div class="card">' + (st.body.length ? '<canvas id="c-body" height="200"></canvas>' : '<div class="small">Log your weight in the Body tab.</div>') + '</div>';
+  if (st.sleep.length) h += '<div class="section-title">Sleep & resting HR</div><div class="card"><canvas id="c-sleep" height="200"></canvas></div>';
+  h += '<div class="section-title">Recent PRs</div><div class="card">' +
+    (st.prs.length ? st.prs.map(p => '<div class="setrow"><span>🏆 ' + esc(p.ex) + ' <span class="small">' + fmtSet(p.type, p.w, p.r) + '</span></span><span class="small">' + fmtDate(p.date) + '</span></div>').join('') : '<div class="small">No PRs yet. They show up from your second session of an exercise.</div>') + '</div>';
+  $('stats').innerHTML = h;
+
+  // interactions
+  document.querySelectorAll('.bodymap [data-m]').forEach(el => el.onclick = () => {
+    const m = el.dataset.m, v = cur.sets[st.muscles.indexOf(m)] || 0;
+    $('bm-info').innerHTML = '<b>' + esc(m) + '</b>: ' + v + ' sets this week';
+  });
+  const showLift = (n, tapped) => {
+    const d = st.strength[n] || [];
+    store.set('strengthEx', n);
+    $('strCard').style.display = 'block';
+    $('strName').textContent = n;
+    lineChart('c-str', d.map(x => fmtDate(x[0])), [{ label: st.types[n] === 'Reps only' ? 'Best reps' : 'Best e1RM (kg)', data: d.map(x => x[1]), borderColor: css('--accent'), backgroundColor: css('--accent'), fill: false }]);
+    document.querySelectorAll('.lift').forEach(c => c.classList.toggle('on', c.dataset.n === n));
+    if (tapped) $('strCard').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  };
+  document.querySelectorAll('.lift').forEach(c => c.onclick = () => showLift(c.dataset.n, true));
+  if ($('allLifts')) $('allLifts').onclick = () => { S.allLifts = !S.allLifts; renderStats(); };
+  const saved = store.get('strengthEx');
+  if (saved && st.strength[saved]) showLift(saved, false);
+
+  if (anySets) lineChart('c-weeks', st.weeks.map(w => fmtDate(w.week)), st.regions.map(r => ({
+    label: r.name, backgroundColor: r.color, borderRadius: 4,
+    data: st.weeks.map(w => w.sets.slice(r.start, r.start + r.count).reduce((a, b) => a + b, 0)),
+  })), { type: 'bar', stacked: true });
+  if (st.body.length) lineChart('c-body', st.body.map(x => fmtDate(x[0])), [
+    { label: 'Daily', data: st.body.map(x => x[1]), borderColor: css('--line'), backgroundColor: css('--muted'), showLine: false },
+    { label: '7-day avg', data: st.body.map(x => x[2] || null), borderColor: css('--accent'), backgroundColor: css('--accent'), pointRadius: 0 }]);
+  if (st.sleep.length) lineChart('c-sleep', st.sleep.map(x => fmtDate(x[0])), [
+    { label: 'Sleep (h)', data: st.sleep.map(x => x[1] || null), borderColor: '#6366f1', backgroundColor: '#6366f1', yAxisID: 'y1' },
+    { label: 'Resting HR', data: st.sleep.map(x => x[2] || null), borderColor: '#ef4444', backgroundColor: '#ef4444' }],
+    { dual: true, yTitle: 'Resting HR (bpm)', y1Title: 'Sleep (h)' });
+}
+
+// ---------- body ----------
+async function loadBody() {
+  const d = S.date;
+  ['w', 'bf', 'kcal', 'protein', 'notes'].forEach(k => ($('b-' + k).value = ''));
+  $('b-info').textContent = 'Loading...';
+  try {
+    const b = await api('getBody', d);
+    if (d === S.date) renderBody(b);
+  } catch (e) { if (d === S.date) { $('b-info').textContent = '⚠️ Could not load: ' + errText(e); } }
+}
+function renderBody(b) {
+  const d = b.day || {};
+  ['w', 'bf', 'kcal', 'protein', 'notes'].forEach(k => ($('b-' + k).value = d[k] === '' || d[k] == null ? '' : d[k]));
+  const info = [];
+  if (d.avg) info.push('7-day avg ' + (+d.avg).toFixed(1) + ' kg');
+  if (d.gkg) info.push('protein ' + d.gkg + ' g/kg');
+  $('b-info').textContent = info.join('  ·  ') || fmtDate(S.date);
+  renderMeals(b);
+  if (b.series.length) lineChart('c-bodyform', b.series.map(x => fmtDate(x[0])), [
+    { label: 'Daily', data: b.series.map(x => x[1]), borderColor: css('--line'), backgroundColor: css('--muted'), showLine: false },
+    { label: '7-day avg', data: b.series.map(x => x[2] || null), borderColor: css('--accent'), backgroundColor: css('--accent'), pointRadius: 0 }]);
+}
+// A shared guard survives rerenders/date changes while a saved-food request is pending.
+let foodFavoriteBusy = false;
+function foodMacroText(m) {
+  const parts = [m.kcal + ' kcal', 'P ' + m.protein + ' g'];
+  [['carbs', 'C ', ' g'], ['fat', 'F ', ' g'], ['fiber', 'fiber ', ' g'], ['veg', 'veg+fruit ', ''], ['sodium', 'sodium ', ' mg']].forEach(([k, label, unit]) => {
+    if (m[k] !== '' && m[k] != null) parts.push(label + m[k] + unit);
+  });
+  return parts.join(' · ');
+}
+// Meals and saved foods for this date, with day totals vs targets
+function renderMeals(b) {
+  const meals = b.meals || [], t = b.target || {};
+  const known = v => v !== '' && v != null;
+  const has = k => meals.some(m => known(m[k]));
+  const sum = k => { const v = meals.reduce((s, m) => s + (+m[k] || 0), 0); return k === 'veg' ? Math.round(v * 10) / 10 : Math.round(v); };
+  // atLeast: a minimum (fiber, veg+fruit), so going over is fine and never turns orange
+  const bar = (label, v, max, unit, atLeast) => {
+    const pct = max ? Math.min(100, v / max * 100) : 0;
+    const color = max && v > max * 1.05 && !atLeast ? css('--warn') : css('--accent');
+    return '<div class="meal-tot"><span>' + label + '</span><div class="bar"><i style="width:' + pct + '%;background:' + color + '"></i></div>' +
+      '<span>' + v + (max ? ' / ' + max : '') + (unit ? ' ' + unit : '') + '</span></div>';
+  };
+  let h = '';
+  if (meals.length) {
+    h += bar('Calories', sum('kcal'), t.kcal, 'kcal') + bar('Protein', sum('protein'), t.protein, 'g');
+    if (has('carbs') || has('fat')) h += bar('Carbs', sum('carbs'), t.carbs, 'g') + bar('Fat', sum('fat'), t.fat, 'g');
+    // Older meals have no fiber / veg+fruit / sodium: those bars show once a meal of the day has them
+    if (has('fiber')) h += bar('Fiber', sum('fiber'), t.fiber, 'g', true);
+    if (has('veg')) h += bar('Veg+fruit', sum('veg'), t.veg, '', true);
+    if (has('sodium')) h += bar('Sodium', sum('sodium'), t.sodium, 'mg');
+    meals.forEach((m, i) => {
+      const macro = foodMacroText(m);
+      h += '<div class="meal"><div style="flex:1;min-width:0"><div class="small">' + esc(m.time) + ' · ' + esc(m.meal) + '</div>' +
+        '<div class="meal-food">' + esc(m.food) + '</div><div class="meal-macro">' + esc(macro) + '</div>' +
+        '<button class="ask" data-savefood="' + i + '">Save food</button></div>' +
+        '<button class="del" data-meal="' + (i + 1) + '">🗑</button></div>';
+    });
+  } else {
+    h += '<div class="small">No meals saved for this day yet.</div>';
+  }
+  h += '<button class="add-meal" id="b-addmeal">🍽️ Add meal with coach</button>';
+  const favorites = b.favorites || [], renderedDate = S.date;
+  h += '<div class="section-title">Saved foods</div><div class="small">Exact saved portion and nutrition. Log adds it to ' + esc(renderedDate) + ' at the current time.</div>';
+  if (!favorites.length) h += '<div class="small">Tap Save food on a logged meal to reuse it here.</div>';
+  favorites.forEach((f, i) => {
+    h += '<div class="meal"><div style="flex:1;min-width:0"><div class="small">' + esc(f.meal) + '</div><div class="meal-food">' + esc(f.food) +
+      '</div><div class="meal-macro">' + esc(foodMacroText(f)) + '</div><button class="ask" data-logfood="' + i + '">Log</button></div>' +
+      '<button class="del" aria-label="Remove saved food" data-removefood="' + i + '">Remove</button></div>';
+  });
+  $('b-meals').innerHTML = h;
+  const favoriteButtons = () => $('b-meals').querySelectorAll('[data-savefood], [data-logfood], [data-removefood]');
+  favoriteButtons().forEach(btn => { btn.disabled = foodFavoriteBusy; });
+  const changeFavorite = async (method, args, message) => {
+    if (foodFavoriteBusy) return;
+    foodFavoriteBusy = true;
+    favoriteButtons().forEach(btn => { btn.disabled = true; });
+    try {
+      const nb = await api(method, ...args);
+      if (renderedDate === S.date) renderBody(nb);
+      S.stats = null;
+      toast(message);
+    } catch (e) { fail(e); }
+    finally {
+      foodFavoriteBusy = false;
+      favoriteButtons().forEach(btn => { btn.disabled = false; });
+    }
+  };
+  $('b-meals').querySelectorAll('[data-savefood]').forEach(btn => btn.onclick = () => {
+    const i = +btn.dataset.savefood;
+    return changeFavorite('saveFoodFavorite', [renderedDate, i + 1, meals[i]], 'Food saved');
+  });
+  $('b-meals').querySelectorAll('[data-logfood]').forEach(btn => btn.onclick = () =>
+    changeFavorite('logFoodFavorite', [favorites[+btn.dataset.logfood].id, renderedDate], 'Meal logged'));
+  $('b-meals').querySelectorAll('[data-removefood]').forEach(btn => btn.onclick = () => {
+    if (foodFavoriteBusy || !confirm('Remove this saved food? Logged meals will stay.')) return;
+    return changeFavorite('removeFoodFavorite', [favorites[+btn.dataset.removefood].id, renderedDate], 'Saved food removed');
+  });
+  // Two taps to delete, so a stray tap never removes a meal
+  $('b-meals').querySelectorAll('[data-meal]').forEach(btn => btn.onclick = async () => {
+    if (btn.dataset.armed !== '1') { btn.dataset.armed = '1'; btn.textContent = 'Delete?'; setTimeout(() => { btn.dataset.armed = ''; btn.textContent = '🗑'; }, 3000); return; }
+    btn.disabled = true; btn.textContent = '...';
+    const d = S.date;
+    try { const nb = await api('deleteMeal', d, +btn.dataset.meal); if (d === S.date) renderBody(nb); toast('Meal deleted'); }
+    catch (e) { fail(e); btn.disabled = false; btn.textContent = '🗑'; }
+  });
+  $('b-addmeal').onclick = () => {
+    show('coach');
+    $('c-in').value = 'Meal: ' + (S.date !== localYmd(new Date()) ? '(on ' + S.date + ') ' : '');
+    growInput(); $('c-in').focus();
+  };
+}
+
+$('b-save').onclick = async () => {
+  const btn = $('b-save'); btn.disabled = true; btn.textContent = 'Saving...';
+  try {
+    const p = { date: S.date };
+    ['w', 'bf', 'kcal', 'protein', 'notes'].forEach(k => (p[k] = $('b-' + k).value));
+    renderBody(await api('saveBody', p));
+    toast('Saved ✓');
+  } catch (e) { fail(e); }
+  btn.disabled = false; btn.textContent = 'Save';
+};
+
+// ---------- coach ----------
+const C = { hist: [], focus: '', busy: false, ready: null, saving: 0 };
+const COACH_SUGGEST = ['Meal: ข้าวกะเพราหมูสับ ไข่ดาว 1 จาน', 'What should I focus on today?', 'Which muscle am I neglecting this week?', 'Am I eating enough protein?',
+  'How is my progress this month?', 'วันนี้ควรเพิ่มน้ำหนักท่าไหนบ้าง?'];
+
+function loadHist() { try { C.hist = JSON.parse(store.get('coachHist') || '[]'); } catch (e) { C.hist = []; } }
+function saveHist() { C.hist = C.hist.slice(-40); store.set('coachHist', JSON.stringify(C.hist)); }
+
+// Tiny markdown for replies (text is escaped first): headings, bullet lists, **bold**, *italic*, one line at a time
+function mdInline(s) {
+  return s.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/(^|[\s(])\*([^*\s][^*]*?)\*(?=[\s).,!?:;]|$)/g, '$1<i>$2</i>');
+}
+function md(text) {
+  const out = [];
+  let list = false;
+  esc(text).split('\n').forEach(line => {
+    const b = line.match(/^\s*(?:[*\-•]|\d+[.)])\s+(.*)$/);
+    if (b) { if (!list) { out.push('<ul>'); list = true; } out.push('<li>' + mdInline(b[1]) + '</li>'); return; }
+    if (list) { out.push('</ul>'); list = false; }
+    const h = line.match(/^\s*#{1,4}\s+(.*)$/);
+    if (h) out.push('<p><b>' + mdInline(h[1]) + '</b></p>');
+    else if (line.trim()) out.push('<p>' + mdInline(line) + '</p>');
+  });
+  if (list) out.push('</ul>');
+  return out.join('');
+}
+
+async function coachStatus() {
+  if (C.ready === null) {
+    try { C.ready = (await api('getCoachStatus')).hasKey; } catch (e) { fail(e); }
+  }
+  return C.ready;
+}
+
+async function initCoach() {
+  renderMsgs();
+  const ready = await coachStatus();
+  if (ready !== null) $('c-setup').style.display = ready ? 'none' : 'block';
+}
+
+function renderMsgs() {
+  let h = '';
+  if (!C.hist.length) {
+    h += '<div class="bubble bot"><p>Hi! I can see your logged workouts, body weight, food and sleep. Ask me anything about your training, ' +
+      'or tell me what to log or change (sets, food, weight, targets, exercises) and I will show it to you before saving. ' +
+      'ถามเป็นภาษาไทยก็ได้นะ 🙂</p></div>';
+  }
+  C.hist.forEach((m, i) => {
+    if (m.role === 'user') h += '<div class="bubble me">' + (m.photo ? '📷 ' : '') + esc(m.text).replace(/\n/g, '<br>') + '</div>';
+    else if (m.role === 'model') h += '<div class="bubble bot">' + md(m.text) + actsHtml(m, i) + '</div>';
+    else h += '<div class="bubble err">⚠️ ' + esc(m.text) + '</div>';
+  });
+  if (C.busy) h += '<div class="bubble bot typing"><span></span><span></span><span></span></div>';
+  $('c-msgs').innerHTML = h;
+  $('c-sugg').innerHTML = (!C.hist.length && !C.busy ? COACH_SUGGEST : []).map(s => '<button class="chip">' + esc(s) + '</button>').join('');
+  $('c-sugg').querySelectorAll('.chip').forEach(c => c.onclick = () => sendCoach(c.textContent));
+  $('c-msgs').querySelectorAll('[data-act]').forEach(b => b.onclick = () => decideActs(+b.dataset.i, b.dataset.act === 'ok'));
+  $('c-clear').style.display = C.hist.length ? 'inline-block' : 'none';
+  $('c-focus').style.display = C.focus ? 'flex' : 'none';
+  $('c-focus-name').textContent = C.focus;
+  if (document.body.classList.contains('coach')) setTimeout(() => window.scrollTo(0, document.body.scrollHeight), 30);
+}
+
+async function sendCoach(text) {
+  text = String(text || '').trim();
+  const img = C.pic;
+  if (!text && img) text = 'Meal: estimate the food in this photo'; // a photo alone is almost always a meal
+  if (!text || C.busy) return;
+  const ready = await coachStatus();
+  if (ready === null) return; // status check failed, toast already shown
+  if (!ready) { $('c-setup').style.display = 'block'; toast('Paste your Gemini API key first'); return; }
+  C.hist.push(img ? { role: 'user', text: text, photo: true } : { role: 'user', text: text });
+  $('c-in').value = ''; growInput(); clearPic();
+  C.busy = true; saveHist(); renderMsgs();
+  try {
+    const turns = C.hist.filter(m => m.role === 'user' || m.role === 'model').slice(-12)
+      .map(m => ({ role: m.role, text: m.text + actsNote(m) }));
+    const res = await api('askCoach', turns, C.focus, img ? { mime: img.mime, data: img.data } : null);
+    const msg = { role: 'model', text: res.text };
+    if (res.actions && res.actions.length) { msg.actions = res.actions; msg.status = 'pending'; }
+    C.hist.push(msg);
+  } catch (e) {
+    C.hist.push({ role: 'error', text: e && e.message ? e.message : String(e) });
+  }
+  C.busy = false; saveHist(); renderMsgs();
+}
+
+// Changes the coach proposes: shown on a card, written to the sheet only after Save
+function actsHtml(m, i) {
+  if (!m.actions) return '';
+  let h = '<div class="acts">' + m.actions.map(a => '<div class="act' + (a.bad ? ' bad' : '') + '">' + esc(a.label) + '</div>').join('');
+  const usable = m.actions.some(a => !a.bad);
+  if (m.status === 'pending' && usable) {
+    h += '<div class="act-btns"><button class="act-ok" data-act="ok" data-i="' + i + '"' + (C.saving ? ' disabled' : '') + '>' + (C.saving === i + 1 ? 'Saving...' : '✓ Save') + '</button>' +
+      '<button class="act-no" data-act="no" data-i="' + i + '">✗ Cancel</button></div>';
+  } else if (m.status === 'pending') {
+    h += '<div class="act-st bad">Nothing valid to save. Tell the coach what to fix.</div>';
+  } else {
+    h += '<div class="act-st' + (m.status === 'saved' ? ' ok' : m.status === 'cancelled' ? '' : ' bad') + '">' + esc(m.statusText || m.status) + '</div>';
+  }
+  return h + '</div>';
+}
+function actsNote(m) {
+  if (!m.actions) return '';
+  return '\n[Changes proposed: ' + m.actions.map(a => a.label).join('; ') + ' | ' + (m.statusText || m.status) + ']';
+}
+async function decideActs(i, ok) {
+  const m = C.hist[i];
+  if (!m || m.status !== 'pending' || C.saving) return;
+  if (!ok) { m.status = 'cancelled'; m.statusText = 'Cancelled'; saveHist(); renderMsgs(); return; }
+  C.saving = i + 1; renderMsgs();
+  try {
+    const res = await api('applyCoachActions', m.actions.filter(a => !a.bad).map(a => ({ name: a.name, args: a.args })));
+    const bad = res.find(r => !r.ok);
+    m.status = bad ? 'failed' : 'saved';
+    m.statusText = bad ? '⚠️ ' + res.filter(r => r.ok).length + ' saved, then: ' + bad.msg : 'Saved ✓ ' + res.map(r => r.msg).join(' · ');
+    if (res.some(r => r.ok)) { S.stats = null; if (S.train) loadTrain(); }  // loadTrain also reloads cardio
+  } catch (e) {
+    m.status = 'failed'; m.statusText = '⚠️ ' + errText(e);
+  }
+  C.saving = 0; saveHist(); renderMsgs();
+}
+
+function growInput() { const t = $('c-in'); t.style.height = 'auto'; t.style.height = Math.min(t.scrollHeight, 120) + 'px'; t.style.overflowY = t.scrollHeight > 120 ? 'auto' : 'hidden'; }
+function placeCoachBar() { $('c-bar').style.bottom = document.querySelector('nav').offsetHeight + 'px'; }
+
+$('c-in').addEventListener('input', growInput);
+$('c-in').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey && !e.isComposing && !('ontouchstart' in window)) { e.preventDefault(); sendCoach($('c-in').value); }
+});
+// While typing on the phone, hide the bottom nav so the keyboard leaves more room for the chat
+$('c-in').addEventListener('focus', () => { if ('ontouchstart' in window) document.body.classList.add('kb'); });
+$('c-in').addEventListener('blur', () => setTimeout(() => document.body.classList.remove('kb'), 150));
+$('c-send').onclick = () => sendCoach($('c-in').value);
+// Meal shortcut: he types what he ate, the coach estimates it and offers to save it
+// Photo: shrink to ~1024 px JPEG in the phone (fast upload, fits the request), keep it until sent; never stored in history
+$('c-photo').onclick = () => $('c-file').click();
+$('c-file').onchange = async () => {
+  const f = $('c-file').files[0];
+  $('c-file').value = '';
+  if (!f) return;
+  try {
+    const url = URL.createObjectURL(f);
+    const im = await new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => no(new Error('Could not open that photo')); i.src = url; });
+    const k = Math.min(1, 1024 / Math.max(im.naturalWidth, im.naturalHeight));
+    const cv = document.createElement('canvas');
+    cv.width = Math.round(im.naturalWidth * k); cv.height = Math.round(im.naturalHeight * k);
+    cv.getContext('2d').drawImage(im, 0, 0, cv.width, cv.height);
+    URL.revokeObjectURL(url);
+    const dataUrl = cv.toDataURL('image/jpeg', 0.75);
+    C.pic = { mime: 'image/jpeg', data: dataUrl.split(',')[1] };
+    $('c-pic-img').src = dataUrl; $('c-pic').style.display = 'block';
+    if (!$('c-in').value.trim()) $('c-in').value = 'Meal: ';
+    growInput(); $('c-in').focus();
+  } catch (e) { fail(e); }
+};
+function clearPic() { C.pic = null; $('c-pic').style.display = 'none'; $('c-pic-img').removeAttribute('src'); }
+$('c-pic-x').onclick = clearPic;
+$('c-meal').onclick = () => { $('c-in').value = 'Meal: '; growInput(); $('c-in').focus(); };
+$('c-clear').onclick = () => { C.hist = []; C.focus = ''; saveHist(); renderMsgs(); };
+$('c-focus-x').onclick = () => { C.focus = ''; renderMsgs(); };
+$('c-key-save').onclick = async () => {
+  const btn = $('c-key-save'); btn.disabled = true; btn.textContent = 'Checking...';
+  try {
+    await api('saveGeminiKey', $('c-key').value);
+    C.ready = true; $('c-key').value = ''; toast('Coach is ready ✓'); initCoach();
+  } catch (e) { fail(e); }
+  btn.disabled = false; btn.textContent = 'Save key';
+};
+$('s-ask').onclick = () => {
+  const e = S.cur;
+  $('sheet').classList.remove('on');
+  C.focus = e.name;
+  show('coach');
+  $('c-in').value = 'How should I train ' + e.name + ' today?';
+  growInput();
+  $('c-in').focus();
+};
+loadHist();
+window.addEventListener('resize', placeCoachBar);
+
+// ---------- date ----------
+// The app may stay open on the phone overnight: unless he picked another date on purpose, follow the real today
+function setDate(d) {
+  const today = localYmd(new Date());
+  S.date = d || today;
+  S.manualDate = S.date !== today;
+  $('date').value = S.date;
+  $('date').classList.toggle('past', S.manualDate);
+  $('today-btn').style.display = S.manualDate ? 'inline-block' : 'none';
+  $('sheet').classList.remove('on'); // the open logger belongs to the old date
+  S.day = pickDefaultDay(); renderChips(); loadTrain();
+  if ($('v-body').classList.contains('on')) loadBody();
+}
+function followToday() {
+  if (document.visibilityState === 'hidden') return;
+  const today = localYmd(new Date());
+  if (S.manualDate) $('today-btn').style.display = S.date !== today ? 'inline-block' : 'none';
+  else if (S.date !== today) setDate(today);
+}
+document.addEventListener('visibilitychange', followToday);
+window.addEventListener('pageshow', followToday);
+window.addEventListener('focus', followToday);
+setInterval(followToday, 60000);
+$('date').onchange = () => setDate($('date').value);
+$('today-btn').onclick = () => setDate('');
+
+// ---------- start ----------
+S.date = localYmd(new Date());
+S.manualDate = false;
+$('date').value = S.date;
+S.rest = +store.get('rest') || 90;
+S.day = pickDefaultDay();
+renderChips();
+renderTimerChips();
+loadTrain();
+</script>
+</body>
+</html>
